@@ -20,6 +20,7 @@ package org.simbrain.world.dataworld;
 
 import org.apache.log4j.Logger;
 import org.simbrain.util.table.NumericTable;
+import org.simbrain.workspace.AttributeContainer;
 import org.simbrain.workspace.Consumable;
 import org.simbrain.workspace.Producible;
 import org.simbrain.workspace.WorkspaceComponent;
@@ -35,7 +36,7 @@ import java.util.List;
  * <b>DataWorldComponent</b> is a data table which other Simbrain components can
  * use.
  */
-public class DataWorldComponent extends WorkspaceComponent {
+public class DataWorldComponent extends WorkspaceComponent implements AttributeContainer {
 
     /**
      * The static logger for this class.
@@ -110,7 +111,7 @@ public class DataWorldComponent extends WorkspaceComponent {
     private void updateColumns() {
         while (dataTable.getColumnCount() < columns.size()) {
             TableColumn column = columns.remove(columns.size() - 1);
-            fireModelRemoved(column);
+            fireAttributeContainerRemoved(column);
         }
         while (dataTable.getColumnCount() > columns.size()) {
             TableColumn column = new TableColumn(columns.size());
@@ -126,8 +127,8 @@ public class DataWorldComponent extends WorkspaceComponent {
     }
 
     @Override
-    public List<Object> getModels() {
-        List<Object> models = new ArrayList<>();
+    public List<AttributeContainer> getAttributeContainers() {
+        List<AttributeContainer> models = new ArrayList<>();
         models.add(this);
         models.addAll(columns);
         return models;
@@ -146,7 +147,7 @@ public class DataWorldComponent extends WorkspaceComponent {
     }
 
     @Override
-    public Object getObjectFromKey(String objectKey) {
+    public AttributeContainer getObjectFromKey(String objectKey) {
         if (objectKey.equals("DataTable")) {
             return this;
         } else if (objectKey.contains("Column")) {
@@ -185,7 +186,7 @@ public class DataWorldComponent extends WorkspaceComponent {
     /**
      * TableColumn writes to a specific column of the outer DataWorld.
      */
-    public class TableColumn {
+    public class TableColumn implements AttributeContainer {
 
         /**
          * The index of the column.

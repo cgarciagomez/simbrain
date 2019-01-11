@@ -20,8 +20,9 @@ import org.simbrain.workspace.gui.SimbrainDesktop;
 import org.simbrain.workspace.updater.UpdateAction;
 import org.simbrain.world.odorworld.OdorWorld;
 import org.simbrain.world.odorworld.OdorWorldComponent;
+import org.simbrain.world.odorworld.entities.EntityType;
 import org.simbrain.world.odorworld.entities.OdorWorldEntity;
-import org.simbrain.world.odorworld.sensors.TileSensor;
+import org.simbrain.world.odorworld.sensors.LocationSensor;
 
 import javax.swing.*;
 import java.util.ArrayList;
@@ -199,13 +200,13 @@ public class ActorCritic extends RegisteredSimulation {
             public void invoke() {
 
                 // Update net > movement couplings
-                sim.getWorkspace().updateCouplings(effectorCouplings);
+                sim.getWorkspace().getCouplingManager().updateCouplings(effectorCouplings);
 
                 // Update world
                 ob.getOdorWorldComponent().update();
 
                 // Update world > tile neurons and plot couplings
-                sim.getWorkspace().updateCouplings(sensorCouplings);
+                sim.getWorkspace().getCouplingManager().updateCouplings(sensorCouplings);
 
                 // Fourth: update network
                 net.getNetworkComponent().update();
@@ -224,16 +225,16 @@ public class ActorCritic extends RegisteredSimulation {
     void setUpWorld() {
         // TODO: Why can't I use worldwidth and worldheight below? I had to
         // manually set size.
-        ob = sim.addOdorWorld(761, 8, 347, 390, "Tile World");
+        ob = sim.addOdorWorldTMX(761, 8, 347, 390, "empty.tmx");
         world = ob.getWorld();
         world.setObjectsBlockMovement(true);
         world.setWrapAround(false);
 
-        mouse = new OdorWorldEntity(world, OdorWorldEntity.EntityType.MOUSE);
+        mouse = new OdorWorldEntity(world, EntityType.MOUSE);
         world.addEntity(mouse);
         resetMouse();
 
-        cheese = new OdorWorldEntity(world, OdorWorldEntity.EntityType.SWISS);
+        cheese = new OdorWorldEntity(world, EntityType.SWISS);
         double dispersion = rewardDispersionFactor * (tileSize / 2);
         cheese.setCenterLocation(tileSize / 2, tileSize / 2);
         cheese.setSmellSource(new SmellSource(new double[]{1, 0}, StepDecayFunction.create(), dispersion));
@@ -253,7 +254,7 @@ public class ActorCritic extends RegisteredSimulation {
                     double y = (k * tileSize) - i * tileIncrement;
 
                     // Create tile sensor
-                    TileSensor sensor = new TileSensor(mouse, (int) x, (int) y, tileSize, tileSize);
+                    LocationSensor sensor = new LocationSensor(mouse, (int) x, (int) y, tileSize, tileSize);
                     mouse.addSensor(sensor);
 
                     // Create corresponding neuron
@@ -283,7 +284,6 @@ public class ActorCritic extends RegisteredSimulation {
             }
 
         }
-
         setCouplings(oc, nc);
 
     }
@@ -326,12 +326,13 @@ public class ActorCritic extends RegisteredSimulation {
         Coupling westCoupling = sim.tryCoupling(westProducer, westMovement);
         effectorCouplings.add(westCoupling);
 
+        //TODO
         // Add reward smell coupling
-        Producer smell = sim.getProducer(world.getSensor(mouse.getId(), "Sensor_2"), "getCurrentValues");
-        smell.setDescription("Reward");
-        Consumer rewardConsumer = sim.getConsumer(reward, "forceSetActivation");
-        Coupling rewardCoupling = sim.tryCoupling(smell, rewardConsumer);
-        sensorCouplings.add(rewardCoupling);
+//        Producer smell = sim.getProducer(world.getSensor(mouse.getId(), "Sensor_2"), "getCurrentValues");
+//        smell.setDescription("Reward");
+//        Consumer rewardConsumer = sim.getConsumer(reward, "forceSetActivation");
+//        Coupling rewardCoupling = sim.tryCoupling(smell, rewardConsumer);
+//        sensorCouplings.add(rewardCoupling);
     }
 
     /**
@@ -339,16 +340,17 @@ public class ActorCritic extends RegisteredSimulation {
      */
     private void setUpPlot(NetBuilder net) {
         // Create a time series plot
-        plot = sim.addTimeSeriesPlot(759, 377, 363, 285, "Reward, TD Error");
-        Coupling rewardCoupling = sim.couple(net.getNetworkComponent(), reward, plot.getTimeSeriesComponent(), 0);
-        Coupling tdCoupling = sim.couple(net.getNetworkComponent(), tdError, plot.getTimeSeriesComponent(), 1);
-        Coupling valueCoupling = sim.couple(net.getNetworkComponent(), value, plot.getTimeSeriesComponent(), 2);
-        plot.getTimeSeriesModel().setAutoRange(false);
-        plot.getTimeSeriesModel().setRangeUpperBound(2);
-        plot.getTimeSeriesModel().setRangeLowerBound(-1);
-        sensorCouplings.add(rewardCoupling);
-        sensorCouplings.add(tdCoupling);
-        sensorCouplings.add(valueCoupling);
+        //TODO
+//        plot = sim.addTimeSeriesPlot(759, 377, 363, 285, "Reward, TD Error");
+//        Coupling rewardCoupling = sim.couple(net.getNetworkComponent(), reward, plot.getTimeSeriesComponent(), 0);
+//        Coupling tdCoupling = sim.couple(net.getNetworkComponent(), tdError, plot.getTimeSeriesComponent(), 1);
+//        Coupling valueCoupling = sim.couple(net.getNetworkComponent(), value, plot.getTimeSeriesComponent(), 2);
+//        plot.getTimeSeriesModel().setAutoRange(false);
+//        plot.getTimeSeriesModel().setRangeUpperBound(2);
+//        plot.getTimeSeriesModel().setRangeLowerBound(-1);
+//        sensorCouplings.add(rewardCoupling);
+//        sensorCouplings.add(tdCoupling);
+//        sensorCouplings.add(valueCoupling);
     }
 
     /**

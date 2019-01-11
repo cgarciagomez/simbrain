@@ -4,6 +4,7 @@ import com.jme3.app.Application;
 import com.jme3.app.state.AppState;
 import com.jme3.app.state.AppStateManager;
 import com.jme3.renderer.RenderManager;
+import org.simbrain.workspace.AttributeContainer;
 import org.simbrain.world.threedworld.actions.ActionManager;
 import org.simbrain.world.threedworld.controllers.AgentController;
 import org.simbrain.world.threedworld.controllers.CameraController;
@@ -23,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * ThreeDWorld is a container for the engine, entities, and controllers needed
  * for the simbrain 3d environment.
  */
-public class ThreeDWorld implements AppState {
+public class ThreeDWorld implements AppState, AttributeContainer {
 
     /**
      * Listener receives notifications when a ThreeDWorld is initialized or updated.
@@ -64,7 +65,6 @@ public class ThreeDWorld implements AppState {
     public ThreeDWorld() {
         initialized = false;
         engine = new ThreeDEngine();
-        engine.initialize(); // TODO: This was added to force a call. Not sure the correct way to make sure this called.
         engine.getStateManager().attach(this);
         cameraController = new CameraController(this);
         selectionController = new SelectionController(this);
@@ -76,7 +76,6 @@ public class ThreeDWorld implements AppState {
         actions = ActionManager.createActions(this);
         contextMenu = new ContextMenu(this);
         idCounter = new AtomicInteger();
-
     }
 
     /**

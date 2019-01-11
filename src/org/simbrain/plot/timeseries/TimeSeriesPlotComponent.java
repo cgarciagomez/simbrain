@@ -18,17 +18,12 @@
  */
 package org.simbrain.plot.timeseries;
 
-import org.simbrain.plot.ChartCouplingListener;
-import org.simbrain.plot.ChartDataSource;
-import org.simbrain.plot.ChartListener;
-import org.simbrain.workspace.Workspace;
-import org.simbrain.workspace.WorkspaceComponent;
+import org.simbrain.workspace.*;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Represents time series data.
@@ -48,7 +43,6 @@ public class TimeSeriesPlotComponent extends WorkspaceComponent {
     public TimeSeriesPlotComponent(String name) {
         super(name);
         model = new TimeSeriesModel(() -> getWorkspace().getTime());
-        addListener();
     }
 
     /**
@@ -62,37 +56,27 @@ public class TimeSeriesPlotComponent extends WorkspaceComponent {
         super(name);
         this.model = model;
         model.setTimeSupplier(() -> getWorkspace().getTime());
-        addListener();
-    }
-
-    /**
-     * Add chart listener to model.
-     */
-    private void addListener() {
-        model.addListener(new ChartListener() {
-            public void dataSourceAdded(ChartDataSource source) {
-                fireModelAdded(source);
-            }
-
-            public void dataSourceRemoved(ChartDataSource source) {
-                fireModelRemoved(source);
-            }
-        });
     }
 
     @Override
     public void setWorkspace(Workspace workspace) {
         // This is a bit of a hack because the workspace is not available in the constructor.
         super.setWorkspace(workspace);
-        workspace.addCouplingListener(new ChartCouplingListener(getWorkspace(), model, "TimeSeries"));
+        getWorkspace().getCouplingManager().addCouplingListener(new CouplingListenerAdapter() {
+            @Override
+            public void couplingAdded(Coupling<?> coupling) {
+                if (coupling.getConsumer().getBaseObject() == model) {
+                    model.setSeriesNames(coupling.getProducer().getLabelArray());
+                }
+            }
+        });
     }
 
     @Override
-    public List<Object> getModels() {
-        List<Object> models = new ArrayList<Object>();
-        models.add(model);
-        models.addAll(model.getTimeSeriesList());
-        return models;
+    public List<AttributeContainer> getAttributeContainers() {
+        List<AttributeContainer> containers = new ArrayList<>();
+        containers.add(model);
+        return containers;
     }
 
     /**
@@ -103,15 +87,17 @@ public class TimeSeriesPlotComponent extends WorkspaceComponent {
     }
 
     @Override
-    public Object getObjectFromKey(String objectKey) {
-        if (objectKey.equals(model.getName())) {
-            return model;
-        } else {
-            Optional<TimeSeriesModel.TimeSeries> timeSeries = model.getTimeSeries(objectKey);
-            if (timeSeries.isPresent()) {
-                return timeSeries.get();
-            }
-        }
+    public AttributeContainer getObjectFromKey(String objectKey) {
+
+        //todo
+//        if (objectKey.equals(model.getName())) {
+//            return model;
+//        } else {
+//            Optional<TimeSeriesModel.TimeSeries> timeSeries = model.getTimeSeries(objectKey);
+//            if (timeSeries.isPresent()) {
+//                return timeSeries.get();
+//            }
+//        }
         return null;
     }
 
@@ -153,10 +139,6 @@ public class TimeSeriesPlotComponent extends WorkspaceComponent {
     public void closing() {
     }
 
-    @Override
-    public void update() {
-        model.update();
-    }
 
     @Override
     public String getXML() {

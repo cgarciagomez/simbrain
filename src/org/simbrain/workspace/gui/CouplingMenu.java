@@ -1,9 +1,6 @@
 package org.simbrain.workspace.gui;
 
-import org.simbrain.workspace.Consumer;
-import org.simbrain.workspace.Producer;
-import org.simbrain.workspace.Workspace;
-import org.simbrain.workspace.WorkspaceComponent;
+import org.simbrain.workspace.*;
 
 import javax.swing.*;
 import java.util.ArrayList;
@@ -17,13 +14,13 @@ import java.util.List;
 public class CouplingMenu extends JMenu {
 
     private Workspace workspace;
-    private Object source;
+    private AttributeContainer source;
 
     public CouplingMenu(Workspace workspace) {
         this.workspace = workspace;
     }
 
-    public void setSourceModel(Object source) {
+    public void setSourceModel(AttributeContainer source) {
         this.source = source;
         setText("Create " + source.getClass().getSimpleName() + " Coupling");
         updateItems();
@@ -35,11 +32,11 @@ public class CouplingMenu extends JMenu {
 
     private void updateItems() {
         removeAll();
-        List<Producer<?>> producers = workspace.getCouplingFactory().getProducersFromModel(source);
+        List<Producer<?>> producers = CouplingUtils.getProducersFromContainers(source);
         for (Producer<?> producer : producers) {
             createProducerSubmenu(producer);
         }
-        List<Consumer<?>> consumers = workspace.getCouplingFactory().getConsumersFromModel(source);
+        List<Consumer<?>> consumers = CouplingUtils.getConsumersFromContainer(source);
         for (Consumer<?> consumer : consumers) {
             createConsumerSubmenu(consumer);
         }
@@ -50,12 +47,18 @@ public class CouplingMenu extends JMenu {
         JMenu producerSubmenu = new JMenu(producer.getDescription() + " send " + producer.getTypeName() + " to");
         boolean hasItems = false;
         for (WorkspaceComponent targetComponent : workspace.getComponentList()) {
-            List<CouplingMenuItem> couplings = new ArrayList<CouplingMenuItem>();
-            List<Consumer<?>> consumers = workspace.getCouplingFactory().getAllConsumers(targetComponent);
+            List<CouplingMenuItem> couplings = new ArrayList<>();
+            List<Consumer<?>> consumers = targetComponent.getVisibleConsumers();
             for (Consumer<?> consumer : consumers) {
                 if (producer.getType() == consumer.getType()) {
-                    couplings.add(new CouplingMenuItem(workspace, targetComponent.getName() + "/" +
-                        consumer.getDescription(), producer, consumer));
+                    couplings.add(
+                            new CouplingMenuItem(
+                                    workspace,
+                                    targetComponent.getName() + "/" + consumer.getDescription(),
+                                    producer,
+                                    consumer
+                            )
+                    );
                 }
             }
             if (!couplings.isEmpty()) {
@@ -75,11 +78,18 @@ public class CouplingMenu extends JMenu {
         JMenu consumerSubmenu = new JMenu(consumer.getDescription() + " receive " + consumer.getTypeName() + " from");
         boolean hasItems = false;
         for (WorkspaceComponent targetComponent : workspace.getComponentList()) {
-            List<CouplingMenuItem> couplings = new ArrayList<CouplingMenuItem>();
-            List<Producer<?>> producers = workspace.getCouplingFactory().getAllProducers(targetComponent);
+            List<CouplingMenuItem> couplings = new ArrayList<>();
+            List<Producer<?>> producers = targetComponent.getVisibleProducers();
             for (Producer<?> producer : producers) {
                 if (consumer.getType() == producer.getType()) {
-                    couplings.add(new CouplingMenuItem(workspace,  targetComponent.getName() + "/" + producer.getDescription(), producer, consumer));
+                    couplings.add(
+                            new CouplingMenuItem(
+                                    workspace,
+                                    targetComponent.getName() + "/" + producer.getDescription(),
+                                    producer,
+                                    consumer
+                            )
+                    );
                 }
             }
             if (!couplings.isEmpty()) {

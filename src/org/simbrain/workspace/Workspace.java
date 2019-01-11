@@ -126,7 +126,7 @@ public class Workspace {
     /**
      * The CouplingFactory for this workspace.
      */
-    private transient CouplingFactory couplingFactory = new CouplingFactory(this);
+    private transient CouplingManager couplingManager = new CouplingManager(this);
 
     /**
      * Construct a workspace.
@@ -188,6 +188,7 @@ public class Workspace {
      * @param component the component added
      */
     private void fireWorkspaceComponentRemoved(WorkspaceComponent component) {
+        component.getAttributeTypeVisibilityMap().clear();
         for (WorkspaceListener listener : listeners) {
             listener.componentRemoved(component);
         }
@@ -282,10 +283,13 @@ public class Workspace {
      * Update the workspace a single time.
      */
     public void iterate() {
+        for (WorkspaceComponent wc : getComponentList()) {
+            wc.start();
+        }
         synchronized (updaterLock) {
             updater.runOnce();
         }
-        updateStopped();
+        stop();
     }
 
     /**
@@ -297,10 +301,13 @@ public class Workspace {
      *                      latch.
      */
     public void iterate(int numIterations) {
+        for (WorkspaceComponent wc : getComponentList()) {
+            wc.start();
+        }
         synchronized (updaterLock) {
             updater.iterate(numIterations);
         }
-        updateStopped();
+        stop();
     }
 
     /**
@@ -312,8 +319,8 @@ public class Workspace {
         resetTime();
         this.setWorkspaceChanged(false);
         currentFile = null;
+        getCouplings().clear();
         fireWorkspaceCleared();
-        // manager.clearCouplings();
         this.getUpdater().getUpdateManager().setDefaultUpdateActions();
     }
 
@@ -559,111 +566,16 @@ public class Workspace {
         updater.getUpdateManager().addAction(action);
     }
 
-    /**
-     * All couplings for the workspace.
-     */
-    private final transient List<Coupling<?>> couplings = new ArrayList<Coupling<?>>();
-
-    public void addCoupling(Coupling<?> coupling) {
-        couplings.add(coupling);
-        fireCouplingAdded(coupling);
+    /* Get the CouplingFactory for this workspace. */
+    public CouplingManager getCouplingManager() {
+        return couplingManager;
     }
 
-    public void updateCouplings() {
-        for (Coupling<?> coupling : couplings) {
-            coupling.update();
-        }
-    }
-
-    public void removeCoupling(Coupling<?> coupling) {
-        couplings.remove(coupling);
-        fireCouplingRemoved(coupling);
-    }
 
     /**
-     * List of listeners to fire updates when couplings are changed.
-     */
-    private transient List<CouplingListener> couplingListeners = new ArrayList<CouplingListener>();
-
-    /**
-     * Adds a new listener to be updated when changes are made.
-     *
-     * @param listener to be updated of changes
-     */
-    public void addCouplingListener(CouplingListener listener) {
-        couplingListeners.add(listener);
-    }
-
-    /**
-     * Removes the listener from the list.
-     *
-     * @param listener to be removed
-     */
-    public void removeCouplingListener(CouplingListener listener) {
-        couplingListeners.remove(listener);
-    }
-
-    /**
-     * Coupling added.
-     *
-     * @param coupling coupling that was added
-     */
-    private void fireCouplingAdded(Coupling<?> coupling) {
-        for (CouplingListener listeners : couplingListeners) {
-            listeners.couplingAdded(coupling);
-        }
-    }
-
-    /**
-     * Coupling removed.
-     *
-     * @param coupling coupling that was removed
-     */
-    private void fireCouplingRemoved(Coupling<?> coupling) {
-        for (CouplingListener listeners : couplingListeners) {
-            listeners.couplingRemoved(coupling);
-        }
-    }
-
-    private void fireCouplingsRemoved(List<Coupling<?>> couplings) {
-        for (CouplingListener listeners : couplingListeners) {
-            listeners.couplingsRemoved(couplings);
-        }
-    }
-
-    /**
-     * @return the couplings
+     * Convenience method which gets the couplings the coupling manager stores.
      */
     public List<Coupling<?>> getCouplings() {
-        return couplings;
-    }
-
-    public void removeCouplings(List<Coupling<?>> couplings) {
-        this.couplings.removeAll(couplings);
-        // What to do here?
-        this.fireCouplingsRemoved(couplings);
-    }
-
-    /**
-     * Return a coupling in the workspace by the coupling id.
-     */
-    public Coupling<?> getCoupling(String id) {
-        return couplings.stream().filter(c -> c.getId().equalsIgnoreCase(id)).findFirst().get();
-    }
-
-    /**
-     * Convenience method for updating a set of couplings.
-     *
-     * @param couplingList the list of couplings to be updated
-     */
-    public void updateCouplings(List<Coupling<?>> couplingList) {
-        for (Coupling<?> coupling : couplingList) {
-            coupling.update();
-        }
-    }
-
-    /* Get the CouplingFactory for this workspace. */
-    public CouplingFactory getCouplingFactory() {
-        return couplingFactory;
+        return couplingManager.getCouplings();
     }
 }

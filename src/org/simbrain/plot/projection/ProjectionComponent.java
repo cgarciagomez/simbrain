@@ -21,19 +21,18 @@ package org.simbrain.plot.projection;
 import org.simbrain.util.projection.DataPoint;
 import org.simbrain.util.projection.DataPointColored;
 import org.simbrain.util.projection.Projector;
-import org.simbrain.workspace.Consumable;
-import org.simbrain.workspace.Producible;
-import org.simbrain.workspace.WorkspaceComponent;
+import org.simbrain.workspace.*;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * Component for a projection plot.
  */
-public class ProjectionComponent extends WorkspaceComponent {
+public class ProjectionComponent extends WorkspaceComponent implements AttributeContainer {
 
     /**
      * Data model.
@@ -48,17 +47,6 @@ public class ProjectionComponent extends WorkspaceComponent {
     public ProjectionComponent(final String name) {
         super(name);
         projectionModel = new ProjectionModel();
-    }
-
-    /**
-     * Initializes a JFreeChart with specific number of data sources.
-     *
-     * @param name           name of component
-     * @param numDataSources number of data sources to initialize plot with
-     */
-    public ProjectionComponent(final String name, final int numDataSources) {
-        super(name);
-        projectionModel = new ProjectionModel(numDataSources);
     }
 
     /**
@@ -166,8 +154,22 @@ public class ProjectionComponent extends WorkspaceComponent {
 
     @Producible
     public double[] getCurrentPoint() {
-        //TODO: Null pointer exceptions...
-        return projectionModel.getProjector().getCurrentPoint().getVector();
+        if (projectionModel.getProjector().getCurrentPoint() != null) {
+            return projectionModel.getProjector().getCurrentPoint().getVector();
+        }
+        return null;
+    }
+
+    @Consumable
+    public void setLabel(String text) {
+        if (projectionModel.getProjector().getCurrentPoint() != null) {
+            String currentText = projectionModel.getProjector().getCurrentPoint().getLabel();
+            // // Don't empty filled text
+            // if (text.isEmpty() && !currentText.isEmpty()) {
+            //     return;
+            // }
+            projectionModel.getProjector().getCurrentPoint().setLabel(text);
+        }
     }
 
     /**
@@ -179,20 +181,19 @@ public class ProjectionComponent extends WorkspaceComponent {
     public void addPoint(double[] newPoint) {
         if (newPoint.length != projectionModel.getProjector().getDimensions()) {
             projectionModel.getProjector().init(newPoint.length);
-            System.out.println(newPoint.length);
         }
         projectionModel.getProjector().addDatapoint(new DataPointColored(newPoint));
     }
 
     @Override
-    public List<Object> getModels() {
-        List<Object> models = new ArrayList<Object>();
-        models.add(this);
-        return models;
+    public List<AttributeContainer> getAttributeContainers() {
+        List<AttributeContainer> container = new ArrayList<>();
+        container.add(this);
+        return container;
     }
 
     @Override
-    public Object getObjectFromKey(String objectKey) {
+    public AttributeContainer getObjectFromKey(String objectKey) {
         return this;
     }
 

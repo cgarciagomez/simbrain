@@ -89,6 +89,11 @@ public class TimedAccumulatorRule extends SpikingThresholdRule {
         return tar;
     }
 
+    @Override
+    public final boolean isSkipsSynapticUpdates() {
+        return true;
+    }
+
     public int getMaxState() {
         return maxState;
     }

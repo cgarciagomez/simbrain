@@ -18,10 +18,13 @@
  */
 package org.simbrain.world.odorworld;
 
+import com.thoughtworks.xstream.XStream;
 import org.simbrain.util.Utils;
+import org.simbrain.util.piccolo.TileMap;
+import org.simbrain.workspace.Attribute;
+import org.simbrain.workspace.AttributeContainer;
 import org.simbrain.workspace.WorkspaceComponent;
 import org.simbrain.world.odorworld.entities.OdorWorldEntity;
-import org.simbrain.world.odorworld.gui.EntityNode;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -36,18 +39,6 @@ import java.util.*;
  */
 public class OdorWorldComponent extends WorkspaceComponent {
 
-    /**
-     * Recreates an instance of this class from a saved component.
-     *
-     * @param input
-     * @param name
-     * @param format
-     * @return
-     */
-    public static OdorWorldComponent open(InputStream input, String name, String format) {
-        OdorWorld newWorld = (OdorWorld) Utils.getSimbrainXStream().fromXML(input);
-        return new OdorWorldComponent(name, newWorld);
-    }
 
     /**
      * Reference to model world.
@@ -87,7 +78,7 @@ public class OdorWorldComponent extends WorkspaceComponent {
             // Add / remove entities
             if ("entityAdded".equals(evt.getPropertyName())) {
                 OdorWorldEntity entity = (OdorWorldEntity) evt.getNewValue();
-                fireModelAdded(entity);
+                fireAttributeContainerAdded(entity);
 
                 // Add / remove sensors to an entity
                 entity.addPropertyChangeListener(new PropertyChangeListener() {
@@ -97,34 +88,53 @@ public class OdorWorldComponent extends WorkspaceComponent {
                             || "effectorAdded".equals(entityEvent.getPropertyName())
                         )
                         {
-                            fireModelAdded(entityEvent.getNewValue());
+                            fireAttributeContainerAdded((AttributeContainer) entityEvent.getNewValue());
                         } else if ("sensorRemoved".equals(entityEvent.getPropertyName())
                             || "effectorRemoved".equals(entityEvent.getPropertyName())
                         )
                         {
-                            fireModelRemoved(entityEvent.getNewValue());
+                            fireAttributeContainerRemoved((AttributeContainer) entityEvent.getNewValue());
                         }
                     }
                 });
             }
             if ("entityDeleted".equals(evt.getPropertyName())) {
-                fireModelRemoved(evt.getNewValue());
+                fireAttributeContainerRemoved((AttributeContainer) evt.getNewValue());
             }
         });
     }
 
     @Override
     public String getXML() {
-        return Utils.getSimbrainXStream().toXML(world);
+        XStream xstream = Utils.getSimbrainXStream();
+        xstream.processAnnotations(TileMap.class);
+        return xstream.toXML(world);
     }
 
     @Override
     public void save(OutputStream output, String format) {
-        Utils.getSimbrainXStream().toXML(world, output);
+        XStream xstream = Utils.getSimbrainXStream();
+        xstream.processAnnotations(TileMap.class);
+        xstream.toXML(world, output);
+    }
+
+    /**
+     * Recreates an instance of this class from a saved component.
+     *
+     * @param input
+     * @param name
+     * @param format
+     * @return
+     */
+    public static OdorWorldComponent open(InputStream input, String name, String format) {
+        XStream xstream = Utils.getSimbrainXStream();
+        xstream.processAnnotations(TileMap.class);
+        OdorWorld newWorld = (OdorWorld) xstream.fromXML(input);
+        return new OdorWorldComponent(name, newWorld);
     }
 
     @Override
-    public Object getObjectFromKey(String objectKey) {
+    public AttributeContainer getObjectFromKey(String objectKey) {
 
         //System.out.println("-->" + objectKey);
         if (objectKey.startsWith("Entity")) {
@@ -143,21 +153,16 @@ public class OdorWorldComponent extends WorkspaceComponent {
 
     @Override
     public void update() {
-        world.update(this.getWorkspace().getTime());
+        world.update();
     }
 
-    /**
-     * Returns a reference to the odor world.
-     *
-     * @return the odor world object.
-     */
     public OdorWorld getWorld() {
         return world;
     }
 
     @Override
-    public List getModels() {
-        List<Object> models = new ArrayList<Object>();
+    public List<AttributeContainer> getAttributeContainers() {
+        List<AttributeContainer> models = new ArrayList<>();
         for (OdorWorldEntity entity : world.getEntityList()) {
             models.add(entity);
             models.addAll(entity.getSensors());

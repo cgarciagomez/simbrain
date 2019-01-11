@@ -24,19 +24,28 @@ import org.piccolo2d.PNode;
 import org.piccolo2d.event.PInputEventListener;
 import org.piccolo2d.event.PMouseWheelZoomEventHandler;
 import org.piccolo2d.nodes.PImage;
+import org.piccolo2d.nodes.PPath;
 import org.piccolo2d.util.PBounds;
 import org.simbrain.network.gui.nodes.SelectionHandle;
 import org.simbrain.util.StandardDialog;
 import org.simbrain.util.piccolo.SceneGraphBrowser;
+import org.simbrain.util.piccolo.Tile;
+import org.simbrain.util.propertyeditor2.AnnotatedPropertyEditor;
 import org.simbrain.workspace.gui.CouplingMenu;
 import org.simbrain.world.odorworld.actions.*;
 import org.simbrain.world.odorworld.entities.OdorWorldEntity;
-import org.simbrain.world.odorworld.gui.*;
+import org.simbrain.world.odorworld.gui.EntityNode;
+import org.simbrain.world.odorworld.gui.WorldMouseHandler;
+import org.simbrain.world.odorworld.gui.WorldSelectionEvent;
+import org.simbrain.world.odorworld.gui.WorldSelectionModel;
 
 import javax.swing.*;
+import javax.vecmath.Point2d;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.*;
@@ -52,7 +61,7 @@ public class OdorWorldPanel extends JPanel {
     /**
      * The Piccolo PCanvas.
      */
-    private final PCanvas canvas;
+    private final OdorWorldCanvas canvas;
 
     /**
      * Reference to WorkspaceComponent. // TODO: Needed?
@@ -69,6 +78,10 @@ public class OdorWorldPanel extends JPanel {
      */
     private final WorldSelectionModel selectionModel;
 
+    private PNode tileSelectionBox = null;
+
+    private Rectangle tileSelectionModel = null;
+
     /**
      * Color of the world background.
      */
@@ -84,18 +97,29 @@ public class OdorWorldPanel extends JPanel {
      */
     private int defaultHeight = 450;
 
-    /**
-     * The boolean that turns on and off wall drawing behavior for the mouse.
-     */
-    private boolean drawingWalls = false;
-
     private Timer movementTimer;
-
-    private Point2D.Double originalVelocity = null;
 
     private byte manualMovementState;
 
     private List<PImage> layerImageList;
+
+    /**
+     * Extend PCanvas for custom handling of tooltips
+     */
+    private class OdorWorldCanvas extends PCanvas {
+        @Override
+        public String getToolTipText(MouseEvent event) {
+            List<Tile> selectedTiles = getTileStack(event.getPoint());
+            if(selectedTiles == null) {
+                return "";
+            }
+            StringBuilder sb = new StringBuilder("Tile Ids: ");
+            selectedTiles.stream().filter(Objects::nonNull).forEach(tile -> sb.append(" (" + tile.getId() + ")"));
+
+            return sb.toString();
+        }
+
+    }
 
     /**
      * Construct a world, set its background color.
@@ -104,7 +128,9 @@ public class OdorWorldPanel extends JPanel {
      */
     public OdorWorldPanel(OdorWorldComponent component, OdorWorld world) {
 
-        canvas = new PCanvas();
+        canvas = new OdorWorldCanvas();
+        ToolTipManager.sharedInstance().registerComponent(canvas);
+
         setLayout(new BorderLayout());
         this.add("Center", canvas);
 
@@ -134,7 +160,7 @@ public class OdorWorldPanel extends JPanel {
         addKeyBindings(world);
 
         // Mouse events
-        canvas.addInputEventListener(new WorldMouseHandler(this));
+        canvas.addInputEventListener(new WorldMouseHandler(this, world));
 
         // PCamera camera = canvas.getCamera();
 
@@ -143,6 +169,9 @@ public class OdorWorldPanel extends JPanel {
                 EntityNode node = new EntityNode(world, (OdorWorldEntity) evt.getNewValue());
                 canvas.getLayer().addChild(node);
                 selectionModel.setSelection(Collections.singleton(node)); // not working
+                repaint();
+            } else if ("entityDeleted".equals(evt.getPropertyName())) {
+                repaint();
             } else if ("worldUpdated".equals(evt.getPropertyName())) {
                 centerCameraToSelectedEntity();
             } else if ("advance".equals(evt.getPropertyName())) {
@@ -198,6 +227,10 @@ public class OdorWorldPanel extends JPanel {
             PBounds cameraBounds = camera.getFullBounds();
 
             PNode firstNode = getFirstSelectedEntityNode();
+            if(firstNode == null) {
+                return;
+            }
+
             PBounds firstNodeBounds = firstNode.getFullBounds();
 
             double cameraNewX = -cameraBounds.width / 2 + firstNodeBounds.x + firstNodeBounds.width / 2;
@@ -219,6 +252,19 @@ public class OdorWorldPanel extends JPanel {
 
             camera.setViewBounds(new Rectangle2D.Double(cameraNewX, cameraNewY, cameraBounds.width, cameraBounds.height));
             repaint();
+        }
+    }
+
+    public List<Tile> getTileStack(Point point) {
+        return world.getTileMap().getTileStackAtPixel(point);
+    }
+
+    public Tile getTile(Point2D point) {
+        List<Tile> tileStack = world.getTileMap().getTileStackAtPixel(point);
+        if (tileStack == null) {
+            return null;
+        } else {
+            return tileStack.get(0);
         }
     }
 
@@ -486,29 +532,18 @@ public class OdorWorldPanel extends JPanel {
         return manualMovementState > 0;
     }
 
-    private void storeOriginalVelocity(OdorWorldEntity entity) {
-        if (originalVelocity == null) {
-            originalVelocity = new Point2D.Double(
-                    entity.getVelocityX(),
-                    entity.getVelocityY()
-            );
-        }
-    }
-
-    private void loadOriginalVelocity(OdorWorldEntity entity) {
+    private void releaseManualMovement(OdorWorldEntity entity) {
         if (!getManualMovementState()) {
-            if (originalVelocity != null) {
-                entity.setVelocityX(originalVelocity.getX());
-                entity.setVelocityY(originalVelocity.getY());
-            }
-            originalVelocity = null;
-        } else if (!getManualMovementState("s") && !getManualMovementState("w")) {
-            entity.setVelocityX(0.0);
-            entity.setVelocityY(0.0);
+            entity.setManualMode(false);
+        }
+        if (!getManualMovementState("w") && !getManualMovementState("s")) {
+            entity.resetManualVelocity();
         }
     }
 
 
+
+    //TODO: Maybe move to a new class like in network
     private void addKeyBindings(OdorWorld world) {
 
         // Add / delete
@@ -542,6 +577,42 @@ public class OdorWorldPanel extends JPanel {
             }
         });
 
+        canvas.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("B"), "tooltipTest");
+        canvas.getActionMap().put("tooltipTest", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+
+                if (tileSelectionModel != null) {
+                    if (!tileSelectionModel.contains(world.getLastClickedPosition())) {
+                        canvas.getLayer().removeChild(tileSelectionBox);
+                        tileSelectionModel = null;
+                        tileSelectionBox = null;
+                    }
+                }
+
+                if (tileSelectionBox == null) {
+                    int tileCoordinateX =
+                            (int) (world.getLastClickedPosition().getX() / world.getTileMap().getTilewidth());
+                    int tileCoordinateY =
+                            (int) (world.getLastClickedPosition().getY() / world.getTileMap().getTileheight());
+                    tileSelectionModel = new Rectangle(
+                            tileCoordinateX * world.getTileMap().getTilewidth(),
+                            tileCoordinateY * world.getTileMap().getTileheight(),
+                            world.getTileMap().getTilewidth(),
+                            world.getTileMap().getTileheight()
+                    );
+                    tileSelectionBox = PPath.createRectangle(
+                            tileSelectionModel.getX(),
+                            tileSelectionModel.getY(),
+                            tileSelectionModel.getWidth(),
+                            tileSelectionModel.getHeight()
+                            );
+                    ((PPath) tileSelectionBox).setStrokePaint(Color.ORANGE);
+                    tileSelectionBox.setPaint(null);
+                    canvas.getLayer().addChild(tileSelectionBox);
+                }
+            }
+        });
+
         // Example of getting press and release events
         // See https://docs.oracle.com/javase/8/docs/api/javax/swing/KeyStroke.html#getKeyStroke-java.lang.String-
         canvas.getInputMap().put(KeyStroke.getKeyStroke("pressed W"), "press w");
@@ -550,7 +621,7 @@ public class OdorWorldPanel extends JPanel {
                 setManualMovementState("w", true);
                 OdorWorldEntity entity = getFirstSelectedEntityModel();
                 if (entity != null) {
-                    storeOriginalVelocity(entity);
+                    entity.setManualMode(true);
                     entity.goStraight();
                 }
             }
@@ -563,7 +634,7 @@ public class OdorWorldPanel extends JPanel {
                 setManualMovementState("s", true);
                 OdorWorldEntity entity = getFirstSelectedEntityModel();
                 if (entity != null) {
-                    storeOriginalVelocity(entity);
+                    entity.setManualMode(true);
                     entity.goBackwards();
                 }
             }
@@ -578,7 +649,7 @@ public class OdorWorldPanel extends JPanel {
                     if (getManualMovementState("s")) {
                         entity.goBackwards();
                     } else {
-                        loadOriginalVelocity(entity);
+                        releaseManualMovement(entity);
                     }
                 }
             }
@@ -588,11 +659,11 @@ public class OdorWorldPanel extends JPanel {
             public void actionPerformed(ActionEvent e) {
                 setManualMovementState("s", false);
                 OdorWorldEntity entity = getFirstSelectedEntityModel();
-                if(entity !=null) {
+                if(entity != null) {
                     if (getManualMovementState("w")) {
                         entity.goStraight();
                     } else {
-                        loadOriginalVelocity(entity);
+                        releaseManualMovement(entity);
                     }
                 }
             }
@@ -604,7 +675,7 @@ public class OdorWorldPanel extends JPanel {
                 setManualMovementState("a", true);
                 OdorWorldEntity entity = getFirstSelectedEntityModel();
                 if (entity != null) {
-                    storeOriginalVelocity(entity);
+                    entity.setManualMode(true);
                     entity.turnLeft();
                 }
             }
@@ -617,7 +688,7 @@ public class OdorWorldPanel extends JPanel {
                 setManualMovementState("d", true);
                 OdorWorldEntity entity = getFirstSelectedEntityModel();
                 if (entity != null) {
-                    storeOriginalVelocity(entity);
+                    entity.setManualMode(true);
                     entity.turnRight();
                 }
             }
@@ -634,8 +705,8 @@ public class OdorWorldPanel extends JPanel {
                     if (getManualMovementState("d")) {
                         entity.turnRight();
                     } else {
-                        loadOriginalVelocity(entity);
                         entity.stopTurning();
+                        releaseManualMovement(entity);
                     }
                 }
             }
@@ -649,8 +720,8 @@ public class OdorWorldPanel extends JPanel {
                     if (getManualMovementState("a")) {
                         entity.turnLeft();
                     } else {
-                        loadOriginalVelocity(entity);
                         entity.stopTurning();
+                        releaseManualMovement(entity);
                     }
                 }
             }

@@ -99,7 +99,7 @@ public class EdgeOfChaosBitStream extends RegisteredSimulation {
         res2.setLabel("Reservoir 2");
 
         // Connect reservoirs
-        sgRes1 = EdgeOfChaos.connectReservoir(network, res1);
+        sgRes1 = EdgeOfChaos.connectReservoir(network, res1, variance, 4);
         sgRes2 = new SynapseGroup(res2, res2);
         sgRes2.copySynapses(sgRes1);
         sgRes2.setLabel("Recurrent Synapses");
@@ -141,7 +141,7 @@ public class EdgeOfChaosBitStream extends RegisteredSimulation {
             @Override
             public void invoke() {
                 double activationDiff = SimbrainMath.distance(res1.getActivations(), res2.getActivations());
-                ts.getTimeSeriesModel().addData(activationDiff);
+                ts.getTimeSeriesModel().addData(0, sim.getWorkspace().getTime(), activationDiff);
             }
         });
     }

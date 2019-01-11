@@ -18,8 +18,8 @@
  */
 package org.simbrain.plot.histogram;
 
-import org.simbrain.plot.ChartDataSource;
-import org.simbrain.plot.ChartListener;
+import org.simbrain.util.Utils;
+import org.simbrain.workspace.AttributeContainer;
 import org.simbrain.workspace.WorkspaceComponent;
 
 import java.io.InputStream;
@@ -46,7 +46,6 @@ public class HistogramComponent extends WorkspaceComponent {
     public HistogramComponent(final String name) {
         super(name);
         model = new HistogramModel(HistogramModel.INITIAL_DATA_SOURCES);
-        initModelListener();
     }
 
     /**
@@ -59,27 +58,11 @@ public class HistogramComponent extends WorkspaceComponent {
     public HistogramComponent(final String name, final HistogramModel model) {
         super(name);
         this.model = model;
-        initModelListener();
     }
 
-    /**
-     * Add chart listener to model.
-     */
-    private void initModelListener() {
-        model.addListener(new ChartListener() {
-            public void dataSourceAdded(ChartDataSource source) {
-                fireModelAdded(source);
-            }
-
-            public void dataSourceRemoved(ChartDataSource source) {
-                fireModelRemoved(source);
-            }
-
-        });
-    }
 
     @Override
-    public Object getObjectFromKey(String objectKey) {
+    public AttributeContainer getObjectFromKey(String objectKey) {
         return model;
     }
 
@@ -101,13 +84,13 @@ public class HistogramComponent extends WorkspaceComponent {
      * @return bar chart component to be opened
      */
     public static HistogramComponent open(final InputStream input, final String name, final String format) {
-        HistogramModel dataModel = (HistogramModel) HistogramModel.getXStream().fromXML(input);
+        HistogramModel dataModel = (HistogramModel) Utils.getSimbrainXStream().fromXML(input);
         return new HistogramComponent(name, dataModel);
     }
 
     @Override
     public void save(final OutputStream output, final String format) {
-        HistogramModel.getXStream().toXML(model, output);
+        Utils.getSimbrainXStream().toXML(model, output);
     }
 
     @Override
@@ -121,13 +104,13 @@ public class HistogramComponent extends WorkspaceComponent {
 
     @Override
     public String getXML() {
-        return HistogramModel.getXStream().toXML(model);
+        return Utils.getSimbrainXStream().toXML(model);
     }
 
     @Override
-    public List<Object> getModels() {
-        List<Object> models = new ArrayList<Object>();
-        models.add(model);
-        return models;
+    public List<AttributeContainer> getAttributeContainers() {
+        List<AttributeContainer> containers = new ArrayList<>();
+        containers.add(model);
+        return containers;
     }
 }

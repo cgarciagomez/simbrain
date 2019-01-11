@@ -38,8 +38,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-//import org.piccolo2d.nodes.PText;
-
 /**
  * <b>NeuronNode</b> is a Piccolo PNode corresponding to a Neuron in the neural
  * network model.
@@ -155,7 +153,8 @@ public class NeuronNode extends ScreenElement implements PropertyChangeListener 
     private static Color spikingColor = Color.yellow;
 
     /**
-     * Whether text should be visible (when zoomed out, it should be invisible).
+     * Whether text should be visible (when zoomed out, it should be
+     * invisible).
      */
     private boolean currentTextVisibility;
 
@@ -163,6 +162,14 @@ public class NeuronNode extends ScreenElement implements PropertyChangeListener 
      * If true then a custom color is being used for stroke.
      */
     private boolean customStrokeColor = false;
+
+    /**
+     * If true, use a custom zero point. Currently this is set to be between
+     * upper and lower bounds.  In the future more options could be added and
+     * this could become an enum.
+     */
+    // TODO: Wire this up on the GUI!
+    private boolean useCustomZeroPoint = false;
 
     /**
      * Create a new neuron node.
@@ -341,18 +348,27 @@ public class NeuronNode extends ScreenElement implements PropertyChangeListener 
         // Force to blank if 0 (or close to it)
         double gLow = neuron.getUpdateRule().getGraphicalLowerBound();
         double gUp = neuron.getUpdateRule().getGraphicalUpperBound();
-        double zpt = ((gUp-gLow)/2) + gLow;
-        if ((activation > zpt-(.01*zpt)) && (activation < zpt+(.01*zpt))) {
+
+        // A "graphical zero point" that shows as white
+        double gZeroPoint = 0;
+        if (useCustomZeroPoint) {
+            // Current custom choice is between upper and lower bounds.
+            // For example useful to capture whether a biological neuron is
+            // depolarized or hyperpolarized
+            gZeroPoint = ((gUp - gLow) / 2) + gLow;
+        }
+
+        if (Math.abs(activation - gZeroPoint) < 0.001) {
             mainShape.setPaint(Color.white);
-        } else if (activation > zpt) {
+        } else if (activation > gZeroPoint) {
             float saturation = checkSaturationValid((float) Math.abs(activation / neuron.getUpdateRule().getGraphicalUpperBound()));
             mainShape.setPaint(Color.getHSBColor(hotColor, saturation, 1));
-        } else if (activation < zpt) {
+        } else if (activation < gZeroPoint) {
             float saturation;
-            if(activation<=gLow) {
+            if (activation <= gLow) {
                 saturation = 1.0f;
             } else {
-                saturation = checkSaturationValid((float) ((zpt-activation)/(zpt-gLow)));
+                saturation = checkSaturationValid((float) ((gZeroPoint - activation) / (gZeroPoint - gLow)));
             }
             mainShape.setPaint(Color.getHSBColor(coolColor, saturation, 1));
         }
@@ -375,7 +391,7 @@ public class NeuronNode extends ScreenElement implements PropertyChangeListener 
             return;
         }
 
-        if(neuron.getLabel() == null) {
+        if (neuron.getLabel() == null) {
             return;
         }
 

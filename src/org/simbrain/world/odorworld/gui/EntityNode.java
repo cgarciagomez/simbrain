@@ -19,25 +19,16 @@
 package org.simbrain.world.odorworld.gui;
 
 import org.piccolo2d.PNode;
-import org.piccolo2d.nodes.PPath;
-import org.simbrain.util.math.SimbrainMath;
 import org.simbrain.util.piccolo.RotatingSprite;
 import org.simbrain.util.piccolo.Sprite;
 import org.simbrain.world.odorworld.OdorWorld;
 import org.simbrain.world.odorworld.entities.OdorWorldEntity;
 import org.simbrain.world.odorworld.entities.RotatingEntityManager;
 import org.simbrain.world.odorworld.resources.OdorWorldResourceManager;
-import org.simbrain.world.odorworld.sensors.Sensor;
-import org.simbrain.world.odorworld.sensors.SmellSensor;
-import org.simbrain.world.odorworld.sensors.VisualizableSensor;
+import org.simbrain.world.odorworld.sensors.VisualizableEntityAttribute;
 
-// import java.awt.*;
-import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -75,9 +66,10 @@ public class EntityNode extends PNode {
      */
     private double frameCounter = 0;
 
-    private Map<VisualizableSensor, SensorNode> visualizableSensorMap = new HashMap<>();
-
-    private final static int SENSOR_DIAMATER = 6;
+    /**
+     * A map from {@link VisualizableEntityAttribute} (model) to {@link EntityAttributeNode} (view).
+     */
+    private Map<VisualizableEntityAttribute, EntityAttributeNode> visualizableAttributeMap = new HashMap<>();
 
     /**
      * Construct an entity node with a back-ref to parent.
@@ -89,23 +81,57 @@ public class EntityNode extends PNode {
         this.parent = world;
         this.entity = entity;
 
-        // this.setPickable(true); //Needed?
-
         updateImage();
-        syncViewWithModel();
+        updateEntityAttributeModel();
 
         setOffset(entity.getX(), entity.getY());
         entity.addPropertyChangeListener(evt -> {
             if ("propertiesChanged".equals(evt.getPropertyName())) {
                 updateImage();
+                if (this.entity.isShowSensors()) {
+                    visualizableAttributeMap.values().forEach(n -> n.setVisible(true));
+                } else {
+                    visualizableAttributeMap.values().forEach(n -> n.setVisible(false));
+                }
             } else if ("deleted".equals(evt.getPropertyName())) {
                 this.removeFromParent();
             } else if ("moved".equals(evt.getPropertyName())) {
                 updateFlag = true;
             } else if ("updated".equals(evt.getPropertyName())) {
                 update();
+            } else if ("sensorAdded".equals(evt.getPropertyName()) || "effectorAdded".equals(evt.getPropertyName())) {
+                if (evt.getNewValue() instanceof VisualizableEntityAttribute) {
+                    VisualizableEntityAttribute toAdd = (VisualizableEntityAttribute) evt.getNewValue();
+                    addAttribute(toAdd);
+                }
+            } else if ("sensorRemoved".equals(evt.getPropertyName())
+                    || "effectorRemoved".equals(evt.getPropertyName())) {
+                if (evt.getNewValue() instanceof VisualizableEntityAttribute) {
+                    VisualizableEntityAttribute toRemove = (VisualizableEntityAttribute) evt.getNewValue();
+                    removeAttribute(toRemove);
+                }
             }
         });
+    }
+
+    /**
+     * Add an {@link VisualizableEntityAttribute}.
+     *
+     * @param attribute the attribute to add
+     */
+    private void addAttribute(VisualizableEntityAttribute attribute) {
+        visualizableAttributeMap.put(attribute, EntityAttributeNode.getNode(attribute));
+        addChild(visualizableAttributeMap.get(attribute));
+    }
+
+    /**
+     * Remove an {@link VisualizableEntityAttribute}
+     *
+     * @param attribute the attribute to remove
+     */
+    private void removeAttribute(VisualizableEntityAttribute attribute) {
+        removeChild(visualizableAttributeMap.get(attribute));
+        visualizableAttributeMap.remove(attribute);
     }
 
     /**
@@ -118,46 +144,52 @@ public class EntityNode extends PNode {
         entity.setY(p.getY());
     }
 
-    private void syncViewWithModel() {
-        updateSmellSensorModel();
-    }
+    /**
+     * Sync all visualizable entity attributes to this node.
+     * Should only be called on initialization or deserialization
+     */
+    private void updateEntityAttributeModel() {
 
-    private void updateSmellSensorModel() {
-
-        List<VisualizableSensor> visualizableSensorList =
+        List<VisualizableEntityAttribute> visualizableEntityAttributeList =
                 entity.getSensors().stream()
-                        .filter(VisualizableSensor.class::isInstance)
-                        .map(VisualizableSensor.class::cast)
+                        .filter(VisualizableEntityAttribute.class::isInstance)
+                        .map(VisualizableEntityAttribute.class::cast)
                         .collect(Collectors.toList());
 
-        // TODO: let event handler handle removal.
-        for (VisualizableSensor vs : visualizableSensorMap.keySet()) {
-            if (!visualizableSensorList.contains(vs)) {
-                removeChild(visualizableSensorMap.get(vs));
-                visualizableSensorMap.remove(vs);
-            }
-        }
+        visualizableEntityAttributeList.addAll(
+                entity.getEffectors().stream()
+                        .filter(VisualizableEntityAttribute.class::isInstance)
+                        .map(VisualizableEntityAttribute.class::cast)
+                        .collect(Collectors.toList())
+        );
 
-        for (VisualizableSensor vs : visualizableSensorList) {
-            SensorNode currentSensorNode;
-            if (!visualizableSensorMap.containsKey(vs)) {
-                currentSensorNode = vs.getNode();
-                addChild(currentSensorNode);
-                visualizableSensorMap.put(vs, currentSensorNode);
+        for (VisualizableEntityAttribute vp : visualizableEntityAttributeList) {
+            EntityAttributeNode currentEntityAttributeNode;
+            if (!visualizableAttributeMap.containsKey(vp)) {
+                currentEntityAttributeNode = EntityAttributeNode.getNode(vp);
+                addChild(currentEntityAttributeNode);
+                visualizableAttributeMap.put(vp, currentEntityAttributeNode);
             } else {
-                currentSensorNode = visualizableSensorMap.get(vs);
+                currentEntityAttributeNode = visualizableAttributeMap.get(vp);
             }
-            currentSensorNode.update();
+            currentEntityAttributeNode.update();
         }
     }
 
     /**
-     * Initialize the image associated with the object.
+     * Update all visualizable attribute nodes.
+     */
+    private void updateAttributesNodes() {
+        visualizableAttributeMap.values().forEach(EntityAttributeNode::update);
+    }
+
+    /**
+     * Initialize the image associated with the object. Only called when
+     * changing the image.
      */
     private void updateImage() {
 
         removeChild(sprite);
-        visualizableSensorMap.values().forEach(this::removeChild);
 
         switch (entity.getEntityType()) {
         case SWISS:
@@ -165,6 +197,12 @@ public class EntityNode extends PNode {
             break;
         case FLOWER:
             sprite = new Sprite(OdorWorldResourceManager.getStaticImage("Pansy.gif"));
+            break;
+        case CANDLE:
+            sprite = new Sprite(OdorWorldResourceManager.getStaticImage("Candle.png"));
+            break;
+        case FISH:
+            sprite = new Sprite(OdorWorldResourceManager.getStaticImage("Fish.gif"));
             break;
         case MOUSE:
             sprite = new RotatingSprite(RotatingEntityManager.getMouse());
@@ -185,13 +223,13 @@ public class EntityNode extends PNode {
         }
 
         addChild(sprite);
-        visualizableSensorMap.values().forEach(this::addChild);
-        if(entity.isRotating()) {
+        visualizableAttributeMap.values().forEach(PNode::raiseToTop);
+        updateAttributesNodes();
+        if (entity.isRotating()) {
             ((RotatingSprite) sprite).updateHeading(entity.getHeading());
         }
 
     }
-
 
     private void update() {
 
@@ -202,16 +240,26 @@ public class EntityNode extends PNode {
                 ((RotatingSprite) sprite).updateHeading(entity.getHeading());
             }
             setOffset(entity.getX(), entity.getY());
-            syncViewWithModel();
-            repaint(); // TODO: Not clear why this is needed. setOffset fires an event.
+            updateAttributesNodes();
+            // repaint(); // TODO: Not clear why this is needed. setOffset fires an event.
             updateFlag = false;
         }
     }
 
+    /**
+     * Advancing animation frame based on the velocity of the entity.
+     */
     public void advance() {
-        double dx = entity.getVelocityX();
-        double dy = entity.getVelocityY();
-        frameCounter += Math.sqrt(dx * dx + dy * dy);
+        double dx;
+        double dy;
+        if (entity.isManualMode()) {
+            dx = entity.getManualMovementVelocity().getX();
+            dy = entity.getManualMovementVelocity().getY();
+        } else {
+            dx = entity.getVelocityX();
+            dy = entity.getVelocityY();
+        }
+        frameCounter += Math.sqrt(dx * dx + dy * dy) / 5;
         int i = 0;
         for (; i < frameCounter; i++) {
             sprite.advance();
@@ -219,6 +267,9 @@ public class EntityNode extends PNode {
         frameCounter -= i;
     }
 
+    /**
+     * Set the sprite to frame where the entity is standing still.
+     */
     public void resetToStaticFrame() {
         sprite.resetToStaticFrame();
     }

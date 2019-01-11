@@ -24,10 +24,12 @@ import org.simbrain.util.math.SimbrainMath;
 import org.simbrain.util.piccolo.TileMap;
 import org.simbrain.util.propertyeditor2.EditableObject;
 import org.simbrain.world.odorworld.effectors.Effector;
+import org.simbrain.world.odorworld.entities.EntityType;
 import org.simbrain.world.odorworld.entities.OdorWorldEntity;
 import org.simbrain.world.odorworld.sensors.Sensor;
 
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.Iterator;
@@ -48,7 +50,7 @@ public class OdorWorld implements EditableObject {
     /**
      * Basic tilemap that determines the size and basic features of the world.
      */
-    private TileMap tileMap = new TileMap("sample.tmx");
+    private TileMap tileMap = TileMap.create("sample.tmx");
 
     /**
      * Sum of lengths of smell vectors for all smelly objects in the world.
@@ -98,6 +100,10 @@ public class OdorWorld implements EditableObject {
      */
     private Point2D lastClickedPosition = new Point2D.Double(50,50);
 
+    private RectangleCollisionBound worldBoundary = new RectangleCollisionBound(new Rectangle2D.Double(
+            0, 0, tileMap.getMapWidth(), tileMap.getMapHeight()
+    ));
+
     /**
      * Default constructor.
      */
@@ -106,10 +112,8 @@ public class OdorWorld implements EditableObject {
 
     /**
      * Update world.
-     *
-     * @param time an integer representation of time.
      */
-    public void update(int time) {
+    public void update() {
         for (OdorWorldEntity entity : entityList) {
             entity.updateSmellSource();
             entity.update();
@@ -139,6 +143,10 @@ public class OdorWorld implements EditableObject {
      */
     public void addEntity(final OdorWorldEntity entity) {
 
+        if(entityList.contains(entity)) {
+            return;
+        }
+
         // Set the entity's id
         entity.setId(entityIDGenerator.getId());
         entity.setName(entity.getId());
@@ -147,24 +155,19 @@ public class OdorWorld implements EditableObject {
         // map.addSprite(entity);
         entityList.add(entity);
 
-        entity.addDefaultSensorsEffectors();
-
         changeSupport.firePropertyChange("entityAdded", null, entity);
 
         // Recompute max stimulus length
         recomputeMaxStimulusLength();
-
     }
 
     /**
      * Add new entity at last clicked position with default properties.
      */
     public void addEntity() {
-
         OdorWorldEntity entity = new OdorWorldEntity(this);
         entity.setLocation(lastClickedPosition.getX(), lastClickedPosition.getY());
         addEntity(entity);
-
     }
 
     /**
@@ -172,10 +175,11 @@ public class OdorWorld implements EditableObject {
      */
     public void addAgent() {
 
-        OdorWorldEntity entity = new OdorWorldEntity(this, OdorWorldEntity.EntityType.MOUSE);
-        entity.setEntityType(OdorWorldEntity.EntityType.MOUSE);
+        OdorWorldEntity entity = new OdorWorldEntity(this, EntityType.MOUSE);
+        entity.setEntityType(EntityType.MOUSE);
         entity.setLocation(lastClickedPosition.getX(), lastClickedPosition.getY());
         addEntity(entity);
+        entity.addDefaultSensorsEffectors();
 
     }
 
@@ -216,7 +220,7 @@ public class OdorWorld implements EditableObject {
     /**
      * Return sensor with matching id or null if none found.
      */
-    public Object getSensor(String id) {
+    public Sensor getSensor(String id) {
         for (OdorWorldEntity entity : entityList) {
             for (Sensor sensor : entity.getSensors()) {
                 if (sensor.getId().equalsIgnoreCase(id)) {
@@ -230,7 +234,7 @@ public class OdorWorld implements EditableObject {
     /**
      * Return effector with matching id or null if none found.
      */
-    public Object getEffector(String id) {
+    public Effector getEffector(String id) {
         for (OdorWorldEntity entity : entityList) {
             for (Effector effector : entity.getEffectors()) {
                 if (effector.getId().equalsIgnoreCase(id)) {
@@ -302,8 +306,6 @@ public class OdorWorld implements EditableObject {
             recomputeMaxStimulusLength();
             changeSupport.firePropertyChange("entityDeleted", null, entity);
         }
-
-
 
     }
 
@@ -566,14 +568,11 @@ public class OdorWorld implements EditableObject {
         return tileMap;
     }
 
-    //TODO: Get rid of these. Here now to prevent compile errors I don't feel like fixing.
-    public void setHeight(int i) {
-    }
-    public void setWidth(int i) {
-    }
-
     public void setTileMap(TileMap tileMap) {
         this.tileMap = tileMap;
+        worldBoundary = new RectangleCollisionBound(new Rectangle2D.Double(
+                0, 0, tileMap.getMapWidth(), tileMap.getMapHeight()
+        ));
         changeSupport.firePropertyChange("tileMapChanged", null, null);
     }
 
@@ -589,5 +588,9 @@ public class OdorWorld implements EditableObject {
 
     public void setLastClickedPosition(Point2D position) {
         lastClickedPosition = position;
+    }
+
+    public RectangleCollisionBound getWorldBoundary() {
+        return worldBoundary;
     }
 }

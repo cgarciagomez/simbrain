@@ -54,6 +54,12 @@ import java.util.concurrent.*;
  * Set to 0, if you want no connections of that type to be made. Set to 1 to
  * have it make the most connections possible given the exponential
  * distribution.
+ * <p>
+ * The larger any of the constants is relative to the others, the more likely a connection
+ * of that type will occur.
+ * <p>
+ * Lambda is roughly the average distance in pixels of connections that will be made.
+ * <p>
  *
  * @author Zoë Tosi
  */
@@ -118,7 +124,7 @@ public class RadialGaussian extends ConnectionStrategy implements EditableObject
     /**
      * A regulating constant governing overall connection density. Higher values
      * create denser connections. Lambda can be thought of as the average
-     * connection distance.
+     * connection distance in pixels.
      */
     @UserParameter(label = "Distance Drop-off", defaultValue = "200",
             minimumValue = 0.01, order = 1 )
@@ -219,7 +225,7 @@ public class RadialGaussian extends ConnectionStrategy implements EditableObject
     }
 
     /**
-     * Default constructor
+     * Default constructor.
      */
     public RadialGaussian() {
         //this.setPermitDensityEditing(false);
@@ -466,8 +472,8 @@ public class RadialGaussian extends ConnectionStrategy implements EditableObject
 
         UniformDistribution rand =
             UniformDistribution.builder()
-                .ofLowerBound(0)
-                .ofUpperBound(1)
+                .lowerBound(0)
+                .upperBound(1)
                 .build();
 
         @Override

@@ -21,11 +21,11 @@ package org.simbrain.network.core;
 import org.simbrain.network.groups.SynapseGroup;
 import org.simbrain.network.synapse_update_rules.StaticSynapseRule;
 import org.simbrain.network.synapse_update_rules.spikeresponders.JumpAndDecay;
-import org.simbrain.network.synapse_update_rules.spikeresponders.NonResponder;
 import org.simbrain.network.synapse_update_rules.spikeresponders.SpikeResponder;
 import org.simbrain.util.UserParameter;
 import org.simbrain.util.Utils;
 import org.simbrain.util.propertyeditor2.EditableObject;
+import org.simbrain.workspace.AttributeContainer;
 import org.simbrain.workspace.Consumable;
 import org.simbrain.workspace.Producible;
 
@@ -40,7 +40,7 @@ import java.util.*;
  * @author Jeff Yoshimi
  * @author Zoë Tosi
  */
-public class Synapse implements EditableObject {
+public class Synapse implements EditableObject, AttributeContainer {
 
     /**
      * A default update rule for the synapse.
@@ -78,7 +78,7 @@ public class Synapse implements EditableObject {
      */
     private Neuron target;
 
-    //TODO: Rename learningRule to synapseupdaterule?
+    //TODO: Rename learningRule to synapseupdaterule
     /**
      * The update method of this synapse, which corresponds to what kind of
      * synapse it is.
@@ -340,8 +340,12 @@ public class Synapse implements EditableObject {
      * Set a default spike responder if the spike responder has not been initialized.
      */
     public void initSpikeResponder() {
-        if (getSpikeResponder() == null) {
+        if(source == null) {
             setSpikeResponder(DEFAULT_SPIKE_RESPONDER);
+        } else if (getSpikeResponder() == null && source.getUpdateRule().isSpikingNeuron()) {
+            setSpikeResponder(DEFAULT_SPIKE_RESPONDER);
+        } else if (!source.getUpdateRule().isSpikingNeuron()) {
+            setSpikeResponder(null);
         }
     }
 
@@ -687,7 +691,10 @@ public class Synapse implements EditableObject {
      * @param sr The spikeResponder to set.
      */
     public void setSpikeResponder(final SpikeResponder sr) {
-        this.spikeResponder = sr;
+        if(source == null || source.getUpdateRule().isSpikingNeuron()) {
+            this.spikeResponder = sr;
+            return;
+        }
     }
 
     /**

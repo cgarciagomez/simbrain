@@ -21,18 +21,15 @@ package org.simbrain.custom_sims;
 import org.simbrain.custom_sims.helper_classes.Simulation;
 import org.simbrain.custom_sims.simulations.actor_critic.ActorCritic;
 import org.simbrain.custom_sims.simulations.agent_trails.AgentTrails;
-import org.simbrain.custom_sims.simulations.behaviorism_sim.BehaviorismSim;
 import org.simbrain.custom_sims.simulations.cerebellum.Cerebellum;
 import org.simbrain.custom_sims.simulations.cortex_simple.CortexSimple;
-import org.simbrain.custom_sims.simulations.creatures.CreaturesSim;
 import org.simbrain.custom_sims.simulations.edge_of_chaos.EdgeOfChaos;
 import org.simbrain.custom_sims.simulations.edge_of_chaos.EdgeOfChaosBitStream;
-import org.simbrain.custom_sims.simulations.hippocampus.Hippocampus;
-import org.simbrain.custom_sims.simulations.mpfs_som.MpfsSOM;
-import org.simbrain.custom_sims.simulations.neat.NEAT;
+import org.simbrain.custom_sims.simulations.patterns_of_activity.KuramotoOscillators;
+import org.simbrain.custom_sims.simulations.patterns_of_activity.ModularOscillatoryNetwork;
 import org.simbrain.custom_sims.simulations.patterns_of_activity.PatternsOfActivity;
 import org.simbrain.custom_sims.simulations.rl_sim.RL_Sim_Main;
-import org.simbrain.custom_sims.simulations.simpleNeuroevolution.SimpleNeuroevolution;
+import org.simbrain.workspace.AttributeContainer;
 import org.simbrain.workspace.gui.SimbrainDesktop;
 
 import java.util.ArrayList;
@@ -49,7 +46,7 @@ import java.util.List;
  * @author ztosi
  * @author jyoshimi
  */
-public abstract class RegisteredSimulation {
+public abstract class RegisteredSimulation implements AttributeContainer {
 
     /**
      * The list used by calling classes to determine what custom simulations are
@@ -74,9 +71,9 @@ public abstract class RegisteredSimulation {
         REGISTERED_SIMS.add(new AgentTrails());
         REGISTERED_SIMS.add(new ActorCritic());
         REGISTERED_SIMS.add(new CortexSimple());
+        REGISTERED_SIMS.add(new ModularOscillatoryNetwork( ));
         REGISTERED_SIMS.add(new PatternsOfActivity( ));
-        REGISTERED_SIMS.add(new BehaviorismSim( ));
-
+        REGISTERED_SIMS.add(new KuramotoOscillators( ));
         // REGISTERED_SIMS.add(new CreaturesSim());
         // REGISTERED_SIMS.add(new MpfsSOM());
         // REGISTERED_SIMS.add(new SimpleNeuroevolution());

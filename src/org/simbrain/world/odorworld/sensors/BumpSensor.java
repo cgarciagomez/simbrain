@@ -20,7 +20,13 @@ package org.simbrain.world.odorworld.sensors;
 
 import org.simbrain.util.UserParameter;
 import org.simbrain.util.propertyeditor2.EditableObject;
+import org.simbrain.workspace.Producible;
+import org.simbrain.world.odorworld.OdorWorld;
+import org.simbrain.world.odorworld.RectangleCollisionBound;
 import org.simbrain.world.odorworld.entities.OdorWorldEntity;
+
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 
 /**
  * Very simple bump sensor. Holding off on more sophisticated "touch" sensors in
@@ -29,30 +35,49 @@ import org.simbrain.world.odorworld.entities.OdorWorldEntity;
  * TODO: Implement once collisions are implemented. At that point can rename to
  * collision sensor? Can also give the sensor a location and make it visible.
  */
-public class BumpSensor extends Sensor {
+public class BumpSensor extends Sensor implements VisualizableEntityAttribute {
 
     /**
-     * Whether it was bumped.
+     * Current value of the sensor.
      */
-    private boolean wasBumped = false;
+    private double value = 0;
 
     /**
-     * Value to produce when bumped.
+     * The value to output when the sensor is bumped.
      */
-    @UserParameter(label = "Output Amount",
-            description = "The amount of activation to be sent to a neuron coupled with this sensor.",
-            defaultValue = "" + 0, order = 4)
-    private double bumpValue = 0;
+    @UserParameter(
+            label = "Base Value",
+            description = "The value to output when the sensor is bumped",
+            defaultValue = "1", order = 4)
+    private double baseValue = 1;
+
+    /**
+     * The length of the sides of the square sensor shape
+     */
+    private int sensorSize = 5;
+
+    /**
+     * Reference to the world this sensor is in
+     */
+    private OdorWorld world;
+
+    /**
+     * The collision bound of this sensor
+     */
+    private RectangleCollisionBound collisionBound = new RectangleCollisionBound(
+            new Rectangle2D.Double(0, 0, sensorSize, sensorSize)
+    );
 
     /**
      * Construct bump sensor.
      *
      * @param parent  parent entity
-     * @param bumpVal value
+     * @param baseValue value
      */
-    public BumpSensor(OdorWorldEntity parent, double bumpVal) {
-        super(parent, "Bump Sensor" + bumpVal);
-        this.bumpValue = bumpVal;
+    public BumpSensor(OdorWorldEntity parent, double baseValue) {
+        super(parent, "Bump Sensor" + baseValue);
+        this.baseValue = baseValue;
+        this.world = parent.getParentWorld();
     }
 
     /**
@@ -62,30 +87,51 @@ public class BumpSensor extends Sensor {
      */
     public BumpSensor(OdorWorldEntity parent) {
         super(parent, "Bump Sensor");
+        this.world = parent.getParentWorld();
     }
 
     /**
-     * {@inheritDoc}
+     * Default constructor for {@link org.simbrain.util.propertyeditor2.AnnotatedPropertyEditor}.
+     *
+     * NOTE:
+     * {@link org.simbrain.world.odorworld.dialogs.AddSensorDialog} handles the set up of {@link #parent}.
+     * When calling this directly, remember to set up the required field {@link #parent} accordingly.
      */
+    public BumpSensor() {
+        super();
+    }
+
+    @Override
     public void update() {
-        // if (wasBumped()) {
-        // return new Double(bumpValue);
-        // } else
-        // return new Double(0);
+        value = 0;
+        updateCollisionBound();
+        if (collided()) {
+            value = baseValue;
+        }
     }
 
     /**
-     * @return the wasBumped
+     * Check if this sensor is collided with any entity.
+     * @return true if collided with an entity, false otherwise
      */
-    public boolean wasBumped() {
-        return wasBumped;
+    public boolean collided() {
+        for (OdorWorldEntity e : world.getEntityList()) {
+            if (e != parent && e.getCollisionBound().collide(this.collisionBound)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
-     * @param wasBumped the wasBumped to set
+     * Update the {@link #collisionBound} base on the updated location of this sensor.
      */
-    public void setBumped(boolean wasBumped) {
-        this.wasBumped = wasBumped;
+    public void updateCollisionBound() {
+        collisionBound.setVelocity(parent.getVelocityX(), parent.getVelocityY());
+        collisionBound.setLocation(
+                getRelativeLocation().getX() + parent.getX(),
+                getRelativeLocation().getY() + parent.getY()
+        );
     }
 
     @Override
@@ -94,12 +140,27 @@ public class BumpSensor extends Sensor {
     }
 
     @Override
+    public void setParent(OdorWorldEntity parent) {
+        this.parent = parent;
+    }
+
+    @Override
     public EditableObject copy() {
-        return new BumpSensor(parent, bumpValue);
+        return new BumpSensor(parent, baseValue);
     }
 
     @Override
     public String getName() {
         return "Bump";
     }
+
+    @Producible(idMethod = "getId", customDescriptionMethod = "getAttributeDescription")
+    public double getCurrentValue() {
+        return value;
+    }
+
+    public int getSensorSize() {
+        return sensorSize;
+    }
+
 }

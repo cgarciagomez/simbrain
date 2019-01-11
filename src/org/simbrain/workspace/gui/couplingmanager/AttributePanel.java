@@ -133,19 +133,20 @@ public class AttributePanel extends JPanel implements ActionListener, MouseListe
      */
     private void addAttributeListener(WorkspaceComponent component) {
         component.addListener(new WorkspaceComponentAdapter() {
-            public void modelAdded(Object model) {
+            public void attributeContainerAdded(AttributeContainer model) {
+                if (isSelectedComponent(component)) {
+                    component.updateVisibilityMap(model);
+                    refresh(component);
+                }
+            }
+
+            public void attributeContainerRemoved(AttributeContainer model) {
                 if (isSelectedComponent(component)) {
                     refresh(component);
                 }
             }
 
-            public void modelRemoved(Object model) {
-                if (isSelectedComponent(component)) {
-                    refresh(component);
-                }
-            }
-
-            public void modelChanged() {
+            public void attributeContainerChanged(AttributeContainer model) {
                 if (isSelectedComponent(component)) {
                     refresh(component);
                 }
@@ -185,16 +186,12 @@ public class AttributePanel extends JPanel implements ActionListener, MouseListe
         if (component != null) {
             model.clear();
             if (producerOrConsumer == ProducerOrConsumer.Producing) {
-                for (Producer<?> producer : component.getWorkspace().getCouplingFactory().getAllProducers(component)) {
-                    if (AttributeTypePanel.isAttributeTypeVisible(producer)) {
-                        model.addElement(producer);
-                    }
+                for (Producer<?> producer : component.getVisibleProducers()) {
+                    model.addElement(producer);
                 }
             } else {
-                for (Consumer<?> consumer : component.getWorkspace().getCouplingFactory().getAllConsumers(component)) {
-                    if (AttributeTypePanel.isAttributeTypeVisible(consumer)) {
-                        model.addElement(consumer);
-                    }
+                for (Consumer<?> consumer : component.getVisibleConsumers()) {
+                    model.addElement(consumer);
                 }
             }
             attributeTypePanel = new AttributeTypePanel(component, producerOrConsumer);

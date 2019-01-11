@@ -5,27 +5,24 @@ import org.simbrain.custom_sims.helper_classes.ControlPanel;
 import org.simbrain.custom_sims.helper_classes.NetBuilder;
 import org.simbrain.custom_sims.helper_classes.OdorWorldBuilder;
 import org.simbrain.custom_sims.helper_classes.PlotBuilder;
-import org.simbrain.network.core.NetworkUpdateAction;
 import org.simbrain.network.core.Neuron;
 import org.simbrain.network.groups.NeuronGroup;
 import org.simbrain.workspace.gui.SimbrainDesktop;
+import org.simbrain.world.odorworld.entities.EntityType;
 import org.simbrain.world.odorworld.entities.OdorWorldEntity;
 import org.simbrain.world.odorworld.sensors.SmellSensor;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Todo Stop button.
+ * Create images and data used in this paper
+ * https://mindmodeling.org/cogsci2014/papers/542/paper542.pdf
  */
-// CHECKSTYLE:OFF
 public class AgentTrails extends RegisteredSimulation {
 
-    NetBuilder net;
+    NetBuilder netBuilder;
     OdorWorldEntity mouse;
     OdorWorldEntity cheese, flower, fish;
     ControlPanel panel;
@@ -36,16 +33,16 @@ public class AgentTrails extends RegisteredSimulation {
     Path csvFile;
     List<String> activationList = new ArrayList<String>();
     PlotBuilder plot;
-    OdorWorldBuilder world;
+    OdorWorldBuilder worldBuilder;
 
     // Default values for these used by buttons
-    int dispersion = 65;
+    int dispersion = 100;
     int fishX = 50;
     int fishY = 100;
-    int flowerX = 200;
+    int flowerX = 330;
     int flowerY = 100;
-    int cheeseX = 120;
-    int cheeseY = 180;
+    int cheeseX = 200;
+    int cheeseY = 250;
 
     public AgentTrails() {
         super();
@@ -58,19 +55,35 @@ public class AgentTrails extends RegisteredSimulation {
         super(desktop);
     }
 
-    /**
-     * Run the simulation!
-     */
     @Override
     public void run() {
 
         // Clear workspace
         sim.getWorkspace().clearWorkspace();
 
-        // Build a network
-        net = sim.addNetwork(195, 9, 447, 296, "Simple Predicter");
-        sensoryNet = net.addNeuronGroup(-9.25, 95.93, 3);
-        sensoryNet.setClamped(true);
+        // Build the network
+        buildNetwork();
+
+        // Create the odor world
+        createOdorWorld();
+
+        // Set up control panel
+        setUpControlPanel();
+
+        // Set up Plot
+        setUpPlot();
+
+        // Uncomment lines below to Log activations, as well as save file below
+        // csvFile = Paths.get("agentTrails.csv");
+        // net.getNetwork().addUpdateAction(new LogActivations(this));
+
+    }
+
+
+    private void buildNetwork() {
+        netBuilder = sim.addNetwork(195, 9, 447, 296, "Simple Predicter");
+        sensoryNet = netBuilder.addNeuronGroup(-9.25, 95.93, 3);
+        //sensoryNet.setClamped(true);
         sensoryNet.setLabel("Sensory");
         cheeseNeuron = sensoryNet.getNeuronList().get(0);
         cheeseNeuron.setLabel("Cheese");
@@ -79,39 +92,50 @@ public class AgentTrails extends RegisteredSimulation {
         fishNeuron = sensoryNet.getNeuronList().get(2);
         fishNeuron.setLabel("Fish");
 
-        actionNet = net.addNeuronGroup(0, -0.79, 3);
+        actionNet = netBuilder.addNeuronGroup(0, -0.79, 3);
         actionNet.setLabel("Actions");
         actionNet.setClamped(true);
         actionNet.setLabel("Actions");
-        leftNeuron = actionNet.getNeuronList().get(0);
-        leftNeuron.setLabel("Left");
+
         straightNeuron = actionNet.getNeuronList().get(1);
         straightNeuron.setLabel("Straight");
         rightNeuron = actionNet.getNeuronList().get(2);
         rightNeuron.setLabel("Right");
-        predictionNet = net.addNeuronGroup(231.02, 24.74, 3);
+        leftNeuron = actionNet.getNeuronList().get(0);
+        leftNeuron.setLabel("Left");
+
+        predictionNet = netBuilder.addNeuronGroup(231.02, 24.74, 3);
         predictionNet.setLabel("Predicted");
 
-        net.connectAllToAll(sensoryNet, predictionNet);
-        net.connectAllToAll(actionNet, predictionNet);
+        netBuilder.connectAllToAll(sensoryNet, predictionNet);
+        netBuilder.connectAllToAll(actionNet, predictionNet);
 
-        errorNeuron = net.addNeuron(268, 108);
-        errorNeuron.setClamped(true);
+        errorNeuron = netBuilder.addNeuron(268, 108);
+        //errorNeuron.setClamped(true);
         errorNeuron.setLabel("Error");
 
-        // Create the odor world
-        world = sim.addOdorWorld(629, 9, 315, 383, "Three Objects");
-        world.getWorld().setObjectsBlockMovement(false);
-        mouse = world.addAgent(120, 245, "Mouse");
-        mouse.setHeading(90);
+        netBuilder.getNetwork().addUpdateAction(new TrainPredictionNet(this));
 
-        // Set up world
-        cheese = world.addEntity(120, 180, "Swiss.gif", new double[]{1, 0, 0});
-        cheese.getSmellSource().setDispersion(65);
-        flower = world.addEntity(200, 100, "Pansy.gif", new double[]{0, 1, 0});
-        cheese.getSmellSource().setDispersion(65);
-        fish = world.addEntity(50, 100, "Fish.gif", new double[]{0, 0, 1});
-        cheese.getSmellSource().setDispersion(65);
+    }
+
+    private void createOdorWorld() {
+
+        worldBuilder = sim.addOdorWorldTMX(629, 9, "empty.tmx");
+        worldBuilder.getWorld().setObjectsBlockMovement(false);
+
+        mouse = worldBuilder.addAgent(204, 343, "Mouse");
+        mouse.setHeading(90);
+        mouse.addDefaultSensorsEffectors();
+        mouse.setManualStraightMovementIncrement(2);
+        mouse.setManualMotionTurnIncrement(2);
+
+        cheese = worldBuilder.addEntity(cheeseX, cheeseY, EntityType.SWISS, new double[]{1, 0, 0});
+        cheese.getSmellSource().setDispersion(dispersion);
+        flower = worldBuilder.addEntity(flowerX, flowerY, EntityType.FLOWER, new double[]{0, 1, 0});
+        flower.getSmellSource().setDispersion(dispersion);
+        fish = worldBuilder.addEntity(fishX, fishY, EntityType.FISH, new double[]{0, 0, 1});
+        fish.getSmellSource().setDispersion(dispersion);
+        worldBuilder.getWorld().update();
 
         // Couple network to agent
         sim.couple(straightNeuron, mouse.getEffector("Go-straight"));
@@ -120,92 +144,65 @@ public class AgentTrails extends RegisteredSimulation {
 
         // Couple agent to network
         sim.couple((SmellSensor) mouse.getSensor("Smell-Center"),sensoryNet);
-//        sim.couple((SmellSensor) mouse.getSensor("Smell-Center"), 0, cheeseNeuron);
-//        sim.couple((SmellSensor) mouse.getSensor("Smell-Center"), 1, flowerNeuron);
-//        sim.couple((SmellSensor) mouse.getSensor("Smell-Center"), 2, fishNeuron);
-
-        setUpControlPanel();
-
-        // Set up Plot
-        // Create a time series plot
-        plot = sim.addProjectionPlot(194, 312, 441, 308, "Sensory states + Predictions");
-
-        plot.getProjectionModel().init(3);
-        sim.couple(net.getNetworkComponent(), sensoryNet, plot.getProjectionPlotComponent());
-        //TODO:Below gets reset as soon as the system runs
-        plot.getProjectionModel().getProjector().setTolerance(.01);
-
-        // Configure custom updating
-        net.getNetwork().getUpdateManager().clear();
-        net.getNetwork().addUpdateAction(new NetworkUpdateAction() {
-
-            // TODO: I'm not happy with this. Change!
-            @Override
-            public void invoke() {
-                //TODO: Below a hack since setting tolerance in run() fails.
-                plot.getProjectionModel().getProjector().setTolerance(.01);
-                actionNet.update();
-                sensoryNet.update();
-                predictionNet.update();
-            }
-
-            @Override
-            public String getDescription() {
-                return "";
-            }
-
-            @Override
-            public String getLongDescription() {
-                return "";
-            }
-        });
-        net.getNetwork().addUpdateAction(new TrainPredictionNet(this));
-
-        // Log activations
-        csvFile = Paths.get("agentTrails.csv");
-        net.getNetwork().addUpdateAction(new LogActivations(this));
-
-        // Add workspace level update action
-        sim.getWorkspace().addUpdateAction(new ColorPlot(this));
-
     }
 
-    // Separate class?
+    private void setUpPlot() {
+        plot = sim.addProjectionPlot(194, 312, 441, 308, "Sensory states + Predictions");
+        plot.getProjectionModel().getProjector().setTolerance(.001);
+        sim.couple(netBuilder.getNetworkComponent(), sensoryNet, plot.getProjectionPlotComponent());
+
+        // Uncomment for prediction halo
+        plot.getProjectionModel().getProjector().setUseColorManager(false);
+        sim.getWorkspace().addUpdateAction(new ColorPlot(this));
+
+        // Label PCA points based on closest object
+        // (how nice this looks depends on tolerance. if tolerance too low then too many labels are created)
+        // Producer currentObject = sim.getProducer(mouse, "getNearbyObjects");
+        // Consumer plotText = sim.getConsumer(plot.getProjectionPlotComponent(), "setLabel");
+        // sim.tryCoupling(currentObject, plotText);
+    }
 
     private void setUpControlPanel() {
 
         panel = ControlPanel.makePanel(sim, "Control Panel", 5, 10);
 
+        // TODO: Finish fine-tuning all these values so that appropriate "trails" are created
         // Move past cheese
         panel.addButton("Cheese", () -> {
-            net.getNetwork().clearActivations();
+            netBuilder.getNetwork().clearActivations();
             mouse.setLocation(cheeseX, cheeseY + dispersion);
             mouse.setHeading(90);
             straightNeuron.forceSetActivation(1);
-            sim.iterate(180);
+            sim.iterate(dispersion*2);
+            straightNeuron.forceSetActivation(0);
+            netBuilder.getNetwork().fireNeuronsUpdated();
         });
 
         // Move past Fish
         panel.addButton("Fish", () -> {
-            net.getNetwork().clearActivations();
+            netBuilder.getNetwork().clearActivations();
             mouse.setLocation(fishX, fishY + dispersion);
             mouse.setHeading(90);
             straightNeuron.forceSetActivation(1);
-            sim.iterate(180);
+            sim.iterate(dispersion*2);
+            straightNeuron.forceSetActivation(0);
+            netBuilder.getNetwork().fireNeuronsUpdated();
         });
 
         // Move past flower
         panel.addButton("Flower", () -> {
-            net.getNetwork().clearActivations();
+            netBuilder.getNetwork().clearActivations();
             mouse.setLocation(flowerX, flowerY + dispersion);
             mouse.setHeading(90);
             straightNeuron.forceSetActivation(1);
-            sim.iterate(180);
+            sim.iterate(dispersion*2);
+            straightNeuron.forceSetActivation(0);
+            netBuilder.getNetwork().fireNeuronsUpdated();
         });
 
         // Cheese > Fish
         panel.addButton("Cheese > Flower", () -> {
-            net.getNetwork().clearActivations();
+            netBuilder.getNetwork().clearActivations();
             mouse.setLocation(cheeseX, cheeseY + dispersion);
             mouse.setHeading(90);
             straightNeuron.forceSetActivation(1);
@@ -214,11 +211,13 @@ public class AgentTrails extends RegisteredSimulation {
             sim.iterate(25);
             rightNeuron.forceSetActivation(0);
             sim.iterate(220);
+            straightNeuron.forceSetActivation(0);
+            netBuilder.getNetwork().fireNeuronsUpdated();
         });
 
         // Cheese > Flower
         panel.addButton("Cheese > Fish", () -> {
-            net.getNetwork().clearActivations();
+            netBuilder.getNetwork().clearActivations();
             mouse.setLocation(cheeseX, cheeseY + dispersion);
             mouse.setHeading(90);
             straightNeuron.forceSetActivation(1);
@@ -227,13 +226,12 @@ public class AgentTrails extends RegisteredSimulation {
             sim.iterate(25);
             leftNeuron.forceSetActivation(0);
             sim.iterate(220);
+            straightNeuron.forceSetActivation(0);
+            netBuilder.getNetwork().fireNeuronsUpdated();
         });
 
-        // TODO: Factor the velocity settings in to another method
         panel.addButton("Solar System", () -> {
-            net.getNetwork().clearActivations();
-            world.getWorld().setHeight(100);
-            world.getWorld().setHeight(100);
+            netBuilder.getNetwork().clearActivations();
             cheese.setVelocityX(2.05f);
             cheese.setVelocityY(2.05f);
             flower.setVelocityX(2.5f);
@@ -244,16 +242,23 @@ public class AgentTrails extends RegisteredSimulation {
             mouse.setHeading(90);
             straightNeuron.forceSetActivation(0);
             sim.iterate(200);
+            cheese.setVelocityX(0);
+            cheese.setVelocityY(0);
+            flower.setVelocityX(0);
+            flower.setVelocityY(0);
+            fish.setVelocityX(0);
+            fish.setVelocityY(0);
+            netBuilder.getNetwork().fireNeuronsUpdated();
         });
 
-        // Save File
-        panel.addButton("Save", () -> {
-            try {
-                Files.write(csvFile, activationList);
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-            }
-        });
+      //// Save File
+      //panel.addButton("Save", () -> {
+      //    try {
+      //        Files.write(csvFile, activationList);
+      //    } catch (IOException ioe) {
+      //        ioe.printStackTrace();
+      //    }
+      //});
 
     }
 

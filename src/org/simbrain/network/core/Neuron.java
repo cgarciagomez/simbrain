@@ -26,6 +26,7 @@ import org.simbrain.network.neuron_update_rules.interfaces.BoundedUpdateRule;
 import org.simbrain.util.SimbrainConstants.Polarity;
 import org.simbrain.util.UserParameter;
 import org.simbrain.util.propertyeditor2.EditableObject;
+import org.simbrain.workspace.AttributeContainer;
 import org.simbrain.workspace.Consumable;
 import org.simbrain.workspace.Producible;
 
@@ -43,7 +44,7 @@ import java.util.stream.Collectors;
  * @author Jeff Yoshimi
  * @author Zoë Tosi
  */
-public class Neuron implements EditableObject {
+public class Neuron implements EditableObject, AttributeContainer {
 
     /**
      * The default neuron update rule. Neurons which are constructed without a
@@ -331,11 +332,12 @@ public class Neuron implements EditableObject {
         NeuronUpdateRule oldRule = this.updateRule;
         this.updateRule = updateRule;
 
-        if (oldRule == null) {
+        if (oldRule == null || (oldRule.isSpikingNeuron() != updateRule.isSpikingNeuron())) {
             for (Synapse s : getFanOut().values()) {
                 s.initSpikeResponder();
             }
         }
+
         if (getNetwork() != null) {
             getNetwork().updateTimeType();
             getNetwork().fireNeuronTypeChanged(oldRule, updateRule);
@@ -514,19 +516,18 @@ public class Neuron implements EditableObject {
     }
 
     /**
-     * Returns the weighted input to this neuron, i.e. for each incoming neuron
-     * n, n's activation times the intervening weights. If n is a spiking
-     * neuron its {@link org.simbrain.network.synapse_update_rules.spikeresponders.SpikeResponder}
-     * is used, so that this returns the sum of the post-synaptic responses (synapse values in
+     * Sums the weighted <b>synaptic</b> inputs to a given neuron based on that
+     * synapse's spike responder. This is usually only appropriate for
+     * biological model neurons.
+     *
+     * @return the sum of the post-synaptic responses (synapse values in
      * response to spikes and mediated by spike responders) impinging on this
      * neuron.
-     *
-     * @return total input to this neuron from other neurons
      */
     public double getInput() {
         double wtdSum = inputValue;
         for (int i = 0, n = fanIn.size(); i < n; i++) {
-            wtdSum += fanIn.get(i).calcPSR();
+            wtdSum += fanIn.get(i).calcPSR(); // Automatically gives a normal weighted sum if the spike responder is null
         }
         return wtdSum;
     }
@@ -544,7 +545,7 @@ public class Neuron implements EditableObject {
     /**
      * Normalizes the excitatory synaptic strengths impinging on this neuron,
      * that is finds the sum of the exctiatory weights and divides each weight
-     * value by that sum;
+     * value by that sum.
      */
     public void normalizeExcitatoryFanIn() {
         double sum = 0;

@@ -21,8 +21,6 @@ import org.simbrain.world.odorworld.entities.OdorWorldEntity;
 import org.simbrain.world.odorworld.sensors.*;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 /**
  * SensorDialog is a dialog box for adding Sensors to Odor World.
@@ -32,10 +30,6 @@ import java.awt.event.ActionListener;
 
 public class AddSensorDialog extends StandardDialog {
 
-    /**
-     * String of Sensor types.
-     */
-    private String[] sensors = {"SmellSensor", "TileSensor", "Tile Set", "Hearing", "ObjectSensor", "BumpSensor"};
 
     /**
      * Entity to which sensor is being added.
@@ -43,19 +37,20 @@ public class AddSensorDialog extends StandardDialog {
     private OdorWorldEntity entity;
 
     /**
-     * Select sensor type.
+     * The editable object APE is going to edit.
      */
-    private JComboBox sensorType = new JComboBox(sensors);
+    private Sensor.SensorCreator sensorCreator = new Sensor.SensorCreator();
+
+    /**
+     * Main editing panel.
+     */
+    private AnnotatedPropertyEditor sensorCreatorPanel = new AnnotatedPropertyEditor(sensorCreator);
 
     /**
      * Main dialog box.
      */
     private Box mainPanel = Box.createVerticalBox();
 
-    /**
-     * Panel for setting sensor type.
-     */
-    private LabelledItemPanel typePanel = new LabelledItemPanel();
 
     /**
      * Sensor Dialog add sensor constructor.
@@ -72,57 +67,24 @@ public class AddSensorDialog extends StandardDialog {
      */
     private void init(String title) {
         setTitle(title);
-        typePanel.addItem("Sensor Type", sensorType);
-        sensorType.setSelectedItem("SmellSensor");
         ShowHelpAction helpAction = new ShowHelpAction("Pages/Worlds/OdorWorld/sensors.html");
         addButton(new JButton(helpAction));
-        initPanel();
-        mainPanel.add(typePanel);
+        mainPanel.add(sensorCreatorPanel);
         setContentPane(mainPanel);
     }
 
     @Override
     protected void closeDialogOk() {
         super.closeDialogOk();
+        sensorCreatorPanel.commitChanges();
         commitChanges();
-    }
-
-    /**
-     * Initialize the Sensor Dialog Panel based upon the current sensor type.
-     */
-    private void initPanel() {
-        if (sensorType.getSelectedItem() == "TileSensor") {
-            setTitle("Add a tile sensor");
-        } else if (sensorType.getSelectedItem() == "SmellSensor") {
-            setTitle("Add a smell sensor");
-        } else if (sensorType.getSelectedItem() == "Tile Set") {
-            setTitle("Add a grid of tile sensors");
-        } else if (sensorType.getSelectedItem() == "Hearing") {
-            setTitle("Add a hearing sensor");
-        } else if (sensorType.getSelectedItem().equals("ObjectSensor")) {
-            setTitle("Add an object sensor");
-        } else if (sensorType.getSelectedItem().equals("BumpSensor")) {
-            setTitle("Add a bump sensor");
-        }
-
     }
 
     /**
      * Called externally when the dialog is closed, to commit any changes made.
      */
     public void commitChanges() {
-        if (sensorType.getSelectedItem() == "TileSensor") {
-            entity.addSensor(new TileSensor(entity, 0, 0, 0, 0));
-        } else if (sensorType.getSelectedItem() == "SmellSensor") {
-            entity.addSensor(new SmellSensor(entity));
-        } else if (sensorType.getSelectedItem() == "Tile Set") {
-            entity.addSensor(new TileSensor(entity, 0, 0, 0, 0));
-        } else if (sensorType.getSelectedItem() == "Hearing") {
-            entity.addSensor(new Hearing(entity));
-        } else if (sensorType.getSelectedItem().equals("ObjectSensor")) {
-            entity.addSensor(new ObjectSensor(entity));
-        } else if (sensorType.getSelectedItem().equals("BumpSensor")) {
-            entity.addSensor(new BumpSensor(entity));
-        }
+        sensorCreator.getSensor().setParent(entity);
+        entity.addSensor(sensorCreator.getSensor());
     }
 }

@@ -2,6 +2,7 @@ package org.simbrain.world.imageworld;
 
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.DomDriver;
+import org.simbrain.workspace.AttributeContainer;
 import org.simbrain.workspace.WorkspaceComponent;
 import org.simbrain.world.imageworld.serialization.BufferedImageConverter;
 import org.simbrain.world.imageworld.serialization.CouplingArrayConverter;
@@ -20,15 +21,10 @@ import java.util.List;
 public class ImageWorldComponent extends WorkspaceComponent {
 
     /**
-     * Create an xstream from this class.
+     * The image world this component displays.
      */
-    public static XStream getXStream() {
-        XStream stream = new XStream(new DomDriver());
-        stream.registerConverter(new BufferedImageConverter());
-        stream.registerConverter(new CouplingArrayConverter());
-        return stream;
-    }
-
+    private ImageWorld world;
+    
     /**
      * Open a saved ImageWorldComponent from an XML input stream.
      *
@@ -41,11 +37,6 @@ public class ImageWorldComponent extends WorkspaceComponent {
         ImageWorld world = (ImageWorld) getXStream().fromXML(input);
         return new ImageWorldComponent(name, world);
     }
-
-    /**
-     * The image world this component displays.
-     */
-    private ImageWorld world;
 
     /**
      * Construct a new ImageWorldComponent.
@@ -63,6 +54,16 @@ public class ImageWorldComponent extends WorkspaceComponent {
         this.world = world;
     }
 
+    /**
+     * Create an xstream from this class.
+     */
+    public static XStream getXStream() {
+        XStream stream = new XStream(new DomDriver());
+        stream.registerConverter(new BufferedImageConverter());
+        stream.registerConverter(new CouplingArrayConverter());
+        return stream;
+    }
+
     @Override
     public void save(OutputStream output, String format) {
         getXStream().toXML(world, output);
@@ -73,15 +74,15 @@ public class ImageWorldComponent extends WorkspaceComponent {
     }
 
     @Override
-    public List<Object> getModels() {
-        List<Object> models = new ArrayList<Object>();
+    public List<AttributeContainer> getAttributeContainers() {
+        List<AttributeContainer> models = new ArrayList<>();
         models.addAll(world.getSensorMatrices());
         models.addAll(world.getImageSources());
         return models;
     }
 
     @Override
-    public Object getObjectFromKey(String objectKey) {
+    public AttributeContainer getObjectFromKey(String objectKey) {
         for (ImageSource source : world.getImageSources()) {
             if (objectKey.equals(source.getClass().getSimpleName())) {
                 return source;
@@ -95,8 +96,8 @@ public class ImageWorldComponent extends WorkspaceComponent {
         return null;
     }
 
-    public List<Object> getSelectedModels() {
-        List<Object> models = new ArrayList<Object>();
+    public List<AttributeContainer> getSelectedModels() {
+        List<AttributeContainer> models = new ArrayList<>();
         models.add(world.getCurrentSensorMatrix());
         models.add(world.getCurrentImageSource());
         return models;

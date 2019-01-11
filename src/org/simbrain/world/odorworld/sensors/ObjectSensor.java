@@ -6,6 +6,7 @@ import org.simbrain.util.math.DecayFunctions.LinearDecayFunction;
 import org.simbrain.util.math.SimbrainMath;
 import org.simbrain.util.propertyeditor2.EditableObject;
 import org.simbrain.workspace.Producible;
+import org.simbrain.world.odorworld.entities.EntityType;
 import org.simbrain.world.odorworld.entities.OdorWorldEntity;
 
 /**
@@ -16,9 +17,9 @@ import org.simbrain.world.odorworld.entities.OdorWorldEntity;
  * object based.
  * <br>
  * The sensor itself is currently fixed at the center of the agent. We may
- * make the location editable at some point, if uses cases emerge.
+ * make the location editable at some point, if use-cases emerge.
  */
-public class ObjectSensor extends Sensor {
+public class ObjectSensor extends Sensor implements VisualizableEntityAttribute {
 
     /**
      * Current value of the sensor.
@@ -43,7 +44,15 @@ public class ObjectSensor extends Sensor {
     @UserParameter(label = "Object Type",
         description = "What type of object this sensor responds to",
         order = 3)
-    private OdorWorldEntity.EntityType objectType = OdorWorldEntity.EntityType.SWISS;
+    private EntityType objectType = EntityType.SWISS;
+
+    /**
+     * Should the sensor node show a label on top.
+     */
+    @UserParameter(label = "Show Label",
+            description = "Show label on top of the sensor node",
+            order = 4, defaultValue = "false")
+    private boolean showLabel = false;
 
     /**
      * Instantiate an object sensor.
@@ -51,7 +60,7 @@ public class ObjectSensor extends Sensor {
      * @param parent     parent entity
      * @param objectType the type (e.g. Swiss.gif)
      */
-    public ObjectSensor(OdorWorldEntity parent, OdorWorldEntity.EntityType objectType) {
+    public ObjectSensor(OdorWorldEntity parent, EntityType objectType) {
         super(parent, objectType.toString());
         this.objectType = objectType;
     }
@@ -65,23 +74,43 @@ public class ObjectSensor extends Sensor {
         super(parent, "Object Sensor");
     }
 
+    /**
+     * Default constructor for {@link org.simbrain.util.propertyeditor2.AnnotatedPropertyEditor}.
+     *
+     * NOTE:
+     * {@link org.simbrain.world.odorworld.dialogs.AddSensorDialog} handles the set up of {@link #parent}.
+     * When calling this directly, remember to set up the required field {@link #parent} accordingly.
+     */
+    public ObjectSensor() {
+        super();
+    }
+
+    public DecayFunction getDecayFunction() {
+        return decayFunction;
+    }
+
+    public ObjectSensor(OdorWorldEntity parent, EntityType type, double angle, double radius) {
+        this(parent, type);
+        setTheta(angle);
+        setRadius(radius);
+    }
+
     @Override
     public void update() {
         value = 0;
         for (OdorWorldEntity entity : parent.getEntitiesInRadius(decayFunction.getDispersion())) {
             if (entity.getEntityType() == objectType) {
-                value = baseValue * decayFunction.getScalingFactor(
-                        SimbrainMath.distance(
-                                new double[]{entity.getCenterX(), entity.getCenterY()},
-                                new double[]{parent.getCenterX(), entity.getCenterY()}
-                        )
-                );
-                break;
+                double scaleFactor = decayFunction.getScalingFactor(
+                    SimbrainMath.distance(
+                        getLocation(),
+                        new double[]{entity.getCenterX(), entity.getCenterY()}
+                    ));
+                value += baseValue * scaleFactor;
             }
         }
     }
 
-    @Producible(idMethod = "getId", customDescriptionMethod = "getSensorDescription")
+    @Producible(idMethod = "getId", customDescriptionMethod = "getAttributeDescription")
     public double getCurrentValue() {
         return value;
     }
@@ -91,13 +120,9 @@ public class ObjectSensor extends Sensor {
         return objectType.toString();
     }
 
-    /**
-     * Called by reflection to return a custom description for the {@link
-     * org.simbrain.workspace.gui.couplingmanager.AttributePanel.ProducerOrConsumer}
-     * corresponding to object sensors.
-     */
-    public String getSensorDescription() {
-        return getParent().getName() + ":" + getTypeDescription() + " sensor";
+    @Override
+    public void setParent(OdorWorldEntity parent) {
+        this.parent = parent;
     }
 
     @Override
@@ -108,5 +133,13 @@ public class ObjectSensor extends Sensor {
     @Override
     public String getName() {
         return "ObjectSensor";
+    }
+
+    public double getBaseValue() {
+        return baseValue;
+    }
+
+    public boolean isShowLabel() {
+        return showLabel;
     }
 }

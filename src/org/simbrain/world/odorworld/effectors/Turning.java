@@ -85,10 +85,26 @@ public class Turning extends Effector {
         this.direction = direction;
     }
 
+    /**
+     * Default constructor for {@link org.simbrain.util.propertyeditor2.AnnotatedPropertyEditor}.
+     *
+     * NOTE:
+     * {@link org.simbrain.world.odorworld.dialogs.AddEffectorDialog} handles the set up of {@link #parent}.
+     * When calling this directly, remember to set up the required field {@link #parent} accordingly.
+     */
+    public Turning() {
+        super();
+    }
+
     @Override
     public void update() {
         parent.turn(direction * amount);
         this.amount = 0;
+    }
+
+    @Override
+    public void setParent(OdorWorldEntity parent) {
+        this.parent = parent;
     }
 
     /**
@@ -103,7 +119,7 @@ public class Turning extends Effector {
      *
      * @param amount amount to turn.
      */
-    @Consumable(idMethod = "getMixedId", customDescriptionMethod = "getEffectorDescription")
+    @Consumable(idMethod = "getMixedId", customDescriptionMethod = "getTurningDescription")
     public void addAmount(double amount) {
         this.amount += amount;
     }
@@ -111,7 +127,7 @@ public class Turning extends Effector {
     /**
      * Called by reflection to return a custom description for couplings.
      */
-    public String getEffectorDescription() {
+    public String getTurningDescription() {
         String dirString = (direction == 1) ? "Left" : "Right";
         return getParent().getName() + ":" + "Turn " + dirString;
     }

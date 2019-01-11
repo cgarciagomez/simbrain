@@ -25,11 +25,17 @@ import org.simbrain.workspace.gui.GuiComponent;
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.simbrain.workspace.CouplingUtils.getConsumersFromContainer;
+import static org.simbrain.workspace.CouplingUtils.getProducersFromContainers;
 
 /**
  * Represents a component in a Simbrain {@link Workspace}. Extend this class to
- * create your own component type. See {@link Workspace} for more info.
+ * create your own component type.
  * <p>
  * Note that for deserialization sublclasses must have a static "open" method,
  * that is called using reflection by {@link org.simbrain.workspace.serialization.WorkspaceComponentDeserializer}.
@@ -52,6 +58,13 @@ public abstract class WorkspaceComponent {
      * The set of all WorkspaceComponentListeners on this component.
      */
     private Collection<WorkspaceComponentListener> listeners;
+
+    /**
+     * The attribute type method to visibility map. If a given method
+     * should be invisible in the {@link org.simbrain.workspace.gui.couplingmanager.AttributePanel}
+     * (for example if synapse couplings are visible this can crowd that panel).
+     */
+    private final Map<Method, Boolean> attributeTypeVisibilityMap = new HashMap<>();
 
     /**
      * Whether this component has changed since last save.
@@ -141,6 +154,7 @@ public abstract class WorkspaceComponent {
      */
     public void close() {
         closing();
+        getAttributeContainers().forEach(this::fireAttributeContainerRemoved);
         workspace.removeWorkspaceComponent(this);
     }
 
@@ -164,17 +178,86 @@ public abstract class WorkspaceComponent {
      * @param objectKey String key
      * @return the corresponding object
      */
-    public Object getObjectFromKey(String objectKey) {
+    public AttributeContainer getObjectFromKey(String objectKey) {
         return null;
     }
 
     /**
-     * Return a collection of all model objects currently managed by this
-     * component. Whenever this collection would
+     * Return a collection of all {@link AttributeContainer}'s currently managed by this
+     * component.
      */
-    public List getModels() {
-        // TODO: This should be abstract.
-        return new ArrayList<Object>();
+    public List<AttributeContainer> getAttributeContainers() {
+        return new ArrayList<>();
+    }
+
+    /**
+     * Get all {@link Producible} or {@link Consumable} methods in this workspace component.
+     *
+     * @param annotation Annotation of the methods. Expect {@link Producible} or {@link Consumable}.
+     * @return a list of all attribute methods in this component.
+     */
+    public List<Method> getAttributeMethods(Class<? extends Annotation> annotation) {
+        if (annotation != Producible.class && annotation != Consumable.class) {
+            return null;
+        }
+        return getAttributeContainers().stream()
+                .map(Object::getClass)
+                .distinct()
+                .flatMap(c -> Arrays.stream(c.getMethods()))
+                .filter(m -> m.isAnnotationPresent(annotation))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all visible producers on a specified component.
+     *
+     * @return the visible producers
+     */
+    public List<Producer<?>> getVisibleProducers() {
+        getProducers().stream()
+                .map(Attribute::getMethod)
+                .filter(m -> !attributeTypeVisibilityMap.containsKey(m))
+                .forEach(m -> attributeTypeVisibilityMap.put(m, m.getAnnotation(Producible.class).defaultVisibility()));
+        return getProducers().stream()
+                .filter(a -> attributeTypeVisibilityMap.get(a.getMethod()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all visible consumers on a specified component.
+     *
+     * @return the visible consumers
+     */
+    public List<Consumer<?>> getVisibleConsumers() {
+        getConsumers().stream()
+                .map(Attribute::getMethod)
+                .filter(m -> !attributeTypeVisibilityMap.containsKey(m))
+                .forEach(m -> attributeTypeVisibilityMap.put(m, m.getAnnotation(Consumable.class).defaultVisibility()));
+        return getConsumers().stream()
+                .filter(a -> attributeTypeVisibilityMap.get(a.getMethod()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all the potential producers for a given WorkspaceComponent.
+     *
+     * @return A list of potential producers.
+     */
+    public List<Producer<?>> getProducers() {
+        return getAttributeContainers().stream()
+                .flatMap(ac -> getProducersFromContainers(ac).stream())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all the potential consumers for a given WorkspaceComponent.
+     *
+     * @return A list of potential consumers.
+     */
+    public List<Consumer<?>> getConsumers() {
+        return getAttributeContainers().stream()
+                .flatMap(ac -> getConsumersFromContainer(ac).stream())
+                .collect(Collectors.toList());
     }
 
     /**
@@ -231,30 +314,51 @@ public abstract class WorkspaceComponent {
     }
 
     /**
-     * Notify listeners that a model object has been added to the component.
+     * Update the visibility map when new attribute type is added.
+     *
+     * @param updatedContainer the new attribute container added to this workspace
      */
-    public void fireModelAdded(Object addedModel) {
-        for (WorkspaceComponentListener listener : listeners) {
-            listener.modelAdded(addedModel);
-        }
+    public void updateVisibilityMap(AttributeContainer updatedContainer) {
+        CouplingUtils.getConsumableMethodsFromContainer(updatedContainer)
+                .forEach(m -> {
+                    if (!attributeTypeVisibilityMap.containsKey(m)) {
+                        attributeTypeVisibilityMap.put(m, m.getAnnotation(Consumable.class).defaultVisibility());
+                    }
+                });
+        CouplingUtils.getProducibleMethodsFromContainer(updatedContainer)
+                .forEach(m -> {
+                    if (!attributeTypeVisibilityMap.containsKey(m)) {
+                        attributeTypeVisibilityMap.put(m, m.getAnnotation(Producible.class).defaultVisibility());
+                    }
+                });
     }
 
     /**
-     * Notify listeners that a model object has been removed from the
+     * Notify listeners that an {@link AttributeContainer} has been added to the component.
+     */
+    public void fireAttributeContainerAdded(AttributeContainer addedContainer) {
+        for (WorkspaceComponentListener listener : listeners) {
+            listener.attributeContainerAdded(addedContainer);
+        }
+        updateVisibilityMap(addedContainer);
+    }
+
+    /**
+     * Notify listeners that an {@link AttributeContainer}  has been removed from the
      * component.
      */
-    public void fireModelRemoved(Object removedModel) {
+    public void fireAttributeContainerRemoved(AttributeContainer removedContainer) {
         for (WorkspaceComponentListener listener : listeners) {
-            listener.modelRemoved(removedModel);
+            listener.attributeContainerRemoved(removedContainer);
         }
     }
 
     /**
-     * Notify listeners that a model object has been changed in the component.
+     * Notify listeners that an {@link AttributeContainer} has been changed in the component.
      */
-    public void fireModelChanged(Object removedModel) {
+    public void fireAttributeContainerChanged(AttributeContainer updatedContainer) {
         for (WorkspaceComponentListener listener : listeners) {
-            listener.modelRemoved(removedModel);
+            listener.attributeContainerChanged(updatedContainer);
         }
     }
 
@@ -353,6 +457,10 @@ public abstract class WorkspaceComponent {
      */
     public void setWorkspace(Workspace workspace) {
         this.workspace = workspace;
+    }
+
+    public Map<Method, Boolean> getAttributeTypeVisibilityMap() {
+        return attributeTypeVisibilityMap;
     }
 
     /**

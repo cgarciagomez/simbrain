@@ -430,7 +430,9 @@ public class NeuronGroupNode extends PNode implements GroupNode, PropertyChangeL
 
         @Override
         protected String getToolTipText() {
-            return "Neurons: " + neuronGroup.size();
+            return "NeuronGroup: " + neuronGroup.getId()
+                + " Location: (" + Utils.round(neuronGroup.getPosition().getX(),2) + ","
+                + Utils.round(neuronGroup.getPosition().getY(),2) + ")";
         }
 
         @Override

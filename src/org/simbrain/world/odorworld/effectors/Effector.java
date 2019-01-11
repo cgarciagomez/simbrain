@@ -20,6 +20,7 @@ package org.simbrain.world.odorworld.effectors;
 
 import org.simbrain.util.UserParameter;
 import org.simbrain.util.propertyeditor2.CopyableObject;
+import org.simbrain.util.propertyeditor2.EditableObject;
 import org.simbrain.world.odorworld.entities.PeripheralAttribute;
 import org.simbrain.world.odorworld.entities.OdorWorldEntity;
 
@@ -29,6 +30,24 @@ import java.util.List;
  * Abstract class for Odor World effectors.
  */
 public abstract class Effector implements CopyableObject, PeripheralAttribute {
+
+    /**
+     * Distributions for drop-down list used by
+     * {@link org.simbrain.util.propertyeditor2.ObjectTypeEditor}
+     * to set a type of effector.
+     */
+    private static List<Class<? extends Effector>> EFFECTORS_LIST = List.of(
+            Speech.class,
+            StraightMovement.class,
+            Turning.class
+    );
+
+    /**
+     * Called via reflection using {@link UserParameter#typeListMethod()}.
+     */
+    public static List<Class<? extends Effector>> getTypes() {
+        return EFFECTORS_LIST;
+    }
 
     /**
      * Reference to parent entity.
@@ -62,6 +81,17 @@ public abstract class Effector implements CopyableObject, PeripheralAttribute {
     }
 
     /**
+     * Default constructor for {@link org.simbrain.util.propertyeditor2.AnnotatedPropertyEditor}.
+     *
+     * NOTE:
+     * {@link org.simbrain.world.odorworld.dialogs.AddEffectorDialog} handles the set up of {@link #parent}.
+     * When calling this directly, remember to set up the required field {@link #parent} accordingly.
+     */
+    public Effector() {
+        super();
+    }
+
+    /**
      * Move the agent in a manner appropriate to the effector type.
      */
     public abstract void update();
@@ -79,6 +109,8 @@ public abstract class Effector implements CopyableObject, PeripheralAttribute {
     public OdorWorldEntity getParent() {
         return parent;
     }
+
+    public abstract void setParent(OdorWorldEntity parent);
 
     public void setId(String name) {
         this.id = name;
@@ -102,4 +134,17 @@ public abstract class Effector implements CopyableObject, PeripheralAttribute {
     @Override
     public abstract String getTypeDescription();
 
+    public static class EffectorCreator implements EditableObject {
+
+        @UserParameter(label="Effector", isObjectType = true)
+        private Effector effector = new StraightMovement();
+
+        public Effector getEffector() {
+            return effector;
+        }
+
+        public void setEffector(Effector effector) {
+            this.effector = effector;
+        }
+    }
 }

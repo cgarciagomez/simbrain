@@ -72,10 +72,26 @@ public class StraightMovement extends Effector {
         super(parent, DEFAULT_LABEL);
     }
 
+    /**
+     * Default constructor for {@link org.simbrain.util.propertyeditor2.AnnotatedPropertyEditor}.
+     *
+     * NOTE:
+     * {@link org.simbrain.world.odorworld.dialogs.AddEffectorDialog} handles the set up of {@link #parent}.
+     * When calling this directly, remember to set up the required field {@link #parent} accordingly.
+     */
+    public StraightMovement() {
+        super();
+    }
+
     @Override
     public void update() {
         parent.goStraight(amount * scalingFactor);
         this.amount = 0;
+    }
+
+    @Override
+    public void setParent(OdorWorldEntity parent) {
+        this.parent = parent;
     }
 
     /**
@@ -88,17 +104,11 @@ public class StraightMovement extends Effector {
     /**
      * @param amount the amount to set
      */
-    @Consumable(idMethod = "getMixedId",customDescriptionMethod = "getEffectorDescription")
+    @Consumable(idMethod = "getMixedId",customDescriptionMethod = "getAttributeDescription")
     public void setAmount(double amount) {
         this.amount = amount;
     }
 
-    /**
-     * Called by reflection to return a custom description for couplings.
-     */
-    public String getEffectorDescription() {
-        return getParent().getName() + ":" + "Go Straight";
-    }
 
     /**
      * Add an amount to go straight. Allows for multiple "moves" to be

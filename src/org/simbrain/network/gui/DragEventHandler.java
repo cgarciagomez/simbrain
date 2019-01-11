@@ -18,6 +18,7 @@
  */
 package org.simbrain.network.gui;
 
+import org.apache.commons.lang3.SystemUtils;
 import org.piccolo2d.PCamera;
 import org.piccolo2d.PLayer;
 import org.piccolo2d.PNode;
@@ -34,10 +35,9 @@ import org.simbrain.network.gui.nodes.*;
 import org.simbrain.network.util.SimnetUtils;
 import org.simbrain.util.Utils;
 
+import java.awt.*;
 import java.awt.event.InputEvent;
-import java.awt.geom.Line2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+import java.awt.geom.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -216,9 +216,18 @@ final class DragEventHandler extends PDragSequenceEventHandler {
 
         super.drag(event);
 
-        // If the command/control button is down,
-        // pan the canvas.
-        if (event.isMetaDown()) {
+        // Pan the canvas for command-click on Mac and control-click on other systems
+        boolean panMode = false;
+        if(SystemUtils.IS_OS_MAC) {
+            if(event.isMetaDown()) {
+                panMode = true;
+            }
+        } else {
+            if (event.isControlDown()) {
+                panMode = true;
+            }
+        }
+        if (panMode) {
             pan(event);
             return;
         }
@@ -350,9 +359,20 @@ final class DragEventHandler extends PDragSequenceEventHandler {
             boolean boundsIntersects = node.getGlobalBounds().intersects(bounds);
             // Allow selection of synapses via the line associated with it
             if (node instanceof SynapseNode) {
-                Line2D.Float line = ((SynapseNode) node).getLineBound();
-                if (bounds.intersectsLine(line)) {
-                    boundsIntersects = true;
+                SynapseNode synapseNode = (SynapseNode) node;
+                if (synapseNode.isSelfConnection()) {
+                    Arc2D.Float arc = synapseNode.getArcBound();
+                    Area boundArea = new Area(bounds);
+                    Area lineArea = new Area(arc);
+                    boundArea.intersect(lineArea);
+                    if (!boundArea.isEmpty()) {
+                        boundsIntersects = true;
+                    }
+                } else {
+                    Line2D.Float line = synapseNode.getLineBound();
+                    if (bounds.intersectsLine(line)) {
+                        boundsIntersects = true;
+                    }
                 }
 
             }

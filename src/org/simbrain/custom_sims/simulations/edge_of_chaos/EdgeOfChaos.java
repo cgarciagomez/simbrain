@@ -42,8 +42,8 @@ public class EdgeOfChaos extends RegisteredSimulation {
     static int GRID_SPACE = 25;
     // Since mean is 0, lower variance means lower average weight strength
     //  For 120 neurons: .01,.1, and > .4
-    private static double variance = .01;
-    private static int K = 4; // in-degree (num connections to each neuron)
+    private double variance = .1;
+    private int K = 4; // in-degree (num connections to each neuron)
 
     // References
     Network network;
@@ -96,7 +96,7 @@ public class EdgeOfChaos extends RegisteredSimulation {
         reservoir.setLabel("Reservoir");
 
         // Connect reservoir
-        sgReservoir = connectReservoir(network, reservoir);
+        sgReservoir = connectReservoir(network, reservoir, variance, K);
 
         // Set up sensor nodes
         buildSensorNodes();
@@ -142,26 +142,26 @@ public class EdgeOfChaos extends RegisteredSimulation {
         return ng;
     }
 
-    static SynapseGroup connectReservoir(Network parentNet, NeuronGroup res) {
+    public static SynapseGroup connectReservoir(Network parentNet, NeuronGroup res, double variance, int k) {
 
         ProbabilityDistribution exRand =
             NormalDistribution.builder()
-                .ofPolarity(Polarity.EXCITATORY)
-                .ofMean(0)
-                .ofStandardDeviation(Math.sqrt(variance))
+                .polarity(Polarity.EXCITATORY)
+                .mean(0)
+                .standardDeviation(Math.sqrt(variance))
                 .build();
 
         ProbabilityDistribution inRand =
             NormalDistribution.builder()
-                .ofPolarity(Polarity.INHIBITORY)
-                .ofMean(0)
-                .ofStandardDeviation(Math.sqrt(variance))
+                .polarity(Polarity.INHIBITORY)
+                .mean(0)
+                .standardDeviation(Math.sqrt(variance))
                 .build();
 
         RadialSimple con = new RadialSimple(parentNet, res.getNeuronList());
-        con.setExcCons(K/2);
+        con.setExcCons(k/2);
         con.setExcitatoryRadius((int) (Math.sqrt(res.getNeuronList().size()) * GRID_SPACE / 2));
-        con.setInhCons(K/2);
+        con.setInhCons(k/2);
         con.setInhibitoryRadius((int) (Math.sqrt(res.getNeuronList().size()) * GRID_SPACE / 2));
         con.setSelectMethod(RadialSimple.SelectionStyle.IN);
 

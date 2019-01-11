@@ -29,10 +29,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * <b>SpikeResponder</b> is a superclass for objects that
- * respond to pre-synaptic spikes with a response that is sent
- * as input to the post-synaptice neuron. For non-spiking neurons
- * a .. todo
+ * <b>SpikeResponder</b>.
  */
 public abstract class SpikeResponder implements CopyableObject {
 
@@ -41,8 +38,7 @@ public abstract class SpikeResponder implements CopyableObject {
      * {@link org.simbrain.util.propertyeditor2.ObjectTypeEditor}
      * to set the spike responder on a synapse.
      */
-    public static List<Class> RESPONDER_LIST = Arrays.asList(
-        NonResponder.class, JumpAndDecay.class,
+    public static List<Class> RESPONDER_LIST = Arrays.asList(JumpAndDecay.class,
         ConvolvedJumpAndDecay.class, ProbabilisticResponder.class,
         RiseAndDecay.class, Step.class, UDF.class);
 

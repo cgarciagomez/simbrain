@@ -18,6 +18,7 @@
  */
 package org.simbrain.world.textworld;
 
+import org.simbrain.workspace.AttributeContainer;
 import org.simbrain.workspace.WorkspaceComponent;
 import org.simbrain.world.textworld.TextWorld.TextItem;
 
@@ -165,17 +166,16 @@ public class DisplayComponent extends WorkspaceComponent {
     }
 
     @Override
-    public Object getObjectFromKey(String objectKey) {
+    public AttributeContainer getObjectFromKey(String objectKey) {
         return world;
     }
 
     @Override
-    public List<Object> getModels() {
-        List<Object> retList = new ArrayList<Object>();
+    public List<AttributeContainer> getAttributeContainers() {
+        List<AttributeContainer> retList = new ArrayList<>();
         retList.add(world);
         //retList.addAll(world.get);
         return retList;
-
     }
 
     /**

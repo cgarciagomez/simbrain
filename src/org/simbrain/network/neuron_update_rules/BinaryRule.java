@@ -91,7 +91,9 @@ public class BinaryRule extends NeuronUpdateRule {
         return bn;
     }
 
-    @Override
+    /**
+     * {@inheritDoc}
+     */
     public void update(Neuron neuron) {
         double wtdInput = neuron.getInput() + bias;
 
