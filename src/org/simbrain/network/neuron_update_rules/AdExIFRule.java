@@ -21,6 +21,7 @@ package org.simbrain.network.neuron_update_rules;
 import org.simbrain.network.core.Neuron;
 import org.simbrain.network.core.SpikingNeuronUpdateRule;
 import org.simbrain.network.neuron_update_rules.interfaces.NoisyUpdateRule;
+import org.simbrain.util.SimbrainConstants;
 import org.simbrain.util.UserParameter;
 import org.simbrain.util.math.ProbDistributions.UniformDistribution;
 import org.simbrain.util.math.ProbabilityDistribution;
@@ -48,10 +49,10 @@ public class AdExIFRule extends SpikingNeuronUpdateRule implements NoisyUpdateRu
      * burst -48: chaotic spike response
      */
     @UserParameter(
-            label = "Reset voltage (mV)",
-            description = "This represents the voltage to which the membrane potential will be reset after "
-                    + "an action potential has fired.",
-            defaultValue = "-47.7", order = 3, tab = "Membrane Voltage")
+        label = "Reset voltage (mV)",
+        description = "This represents the voltage to which the membrane potential will be reset after "
+            + "an action potential has fired.",
+        defaultValue = "-47.7", order = 3, tab = "Membrane Voltage")
     private double v_Reset = -47.7;
 
     /**
@@ -61,10 +62,10 @@ public class AdExIFRule extends SpikingNeuronUpdateRule implements NoisyUpdateRu
      * can still cause an action potential to fail even if v_mem > v_Th.
      */
     @UserParameter(
-            label = "Threshold voltage (mV)",
-            description = "This determines when a neuron will start a divergent change in voltage that will tend "
-                    + "toward infinity and is not the voltage at which we consider the neuron to have spiked.",
-            defaultValue = "-50.4", order = 2, tab = "Membrane Voltage")
+        label = "Threshold voltage (mV)",
+        description = "This determines when a neuron will start a divergent change in voltage that will tend "
+            + "toward infinity and is not the voltage at which we consider the neuron to have spiked.",
+        defaultValue = "-50.4", order = 2, tab = "Membrane Voltage")
     private double v_Th = -50.4;
 
     /**
@@ -72,66 +73,66 @@ public class AdExIFRule extends SpikingNeuronUpdateRule implements NoisyUpdateRu
      * potential has occurred (mV).
      */
     @UserParameter(
-            label = "Peak Voltage (mV)",
-            description = "The peak voltage after which we say with certainty that an action potential has occurred (mV).",
-            defaultValue = "20", order = 1, tab = "Membrane Voltage")
+        label = "Peak Voltage (mV)",
+        description = "The peak voltage after which we say with certainty that an action potential has occurred (mV).",
+        defaultValue = "20", order = 1, tab = "Membrane Voltage")
     private double v_Peak = 20;
 
     /**
      * Leak Conductance (nS).
      */
     @UserParameter(
-            label = "Leak Conductance (nS)",
-            description = "The inverse of the resistance of the channels through which current leaks from the neuron.",
-            defaultValue = "30", order = 6, tab = "Input Currents")
+        label = "Leak Conductance (nS)",
+        description = "The inverse of the resistance of the channels through which current leaks from the neuron.",
+        defaultValue = "30", order = 6, tab = "Input Currents")
     private double g_L = 30;
 
     /**
      * Maximal excitatory conductance. (nS)
      */
     @UserParameter(
-            label = "Max Ex. Conductance (nS)",
-            description = "The excitatory conductance if all excitatory channels are open.",
-            defaultValue = "10", order = 7, tab = "Input Currents")
+        label = "Max Ex. Conductance (nS)",
+        description = "The excitatory conductance if all excitatory channels are open.",
+        defaultValue = "10", order = 7, tab = "Input Currents")
     private double g_e_bar = 10;
 
     /**
      * Maximal inhibitory conductance. (nS)
      */
     @UserParameter(
-            label = "Max In. Conductance (nS)",
-            description = "The inhibitory conductance if all inhibitory channels are open.",
-            defaultValue = "10", order = 8, tab = "Input Currents")
+        label = "Max In. Conductance (nS)",
+        description = "The inhibitory conductance if all inhibitory channels are open.",
+        defaultValue = "10", order = 8, tab = "Input Currents")
     private double g_i_bar = 10;
 
     /**
      * Leak strength (mV).
      */
     @UserParameter(
-            label = "Leak Reversal (mV)",
-            description = "The membrane potential at which leak currents would no longer have "
-                    + "any effect on the neuron's membrane potential.",
-            defaultValue = "-70.6", order = 9, tab = "Input Currents")
+        label = "Leak Reversal (mV)",
+        description = "The membrane potential at which leak currents would no longer have "
+            + "any effect on the neuron's membrane potential.",
+        defaultValue = "-70.6", order = 9, tab = "Input Currents")
     private double leakReversal = -70.6;
 
     /**
      * Excitatory reversal. (mV).
      */
     @UserParameter(
-            label = "Excitatory Reversal (mV)",
-            description = "The membrane potential at which impinging excitatory (depolarizing) "
-                    + "inputs reach equilibrium.",
-            defaultValue = "0", order = 10, tab = "Input Currents")
+        label = "Excitatory Reversal (mV)",
+        description = "The membrane potential at which impinging excitatory (depolarizing) "
+            + "inputs reach equilibrium.",
+        defaultValue = "0", order = 10, tab = "Input Currents")
     private double exReversal = 0;
 
     /**
      * Inhibitory reversal. (mV)
      */
     @UserParameter(
-            label = "Inbitatory Reversal (mV)",
-            description = "The membrane potential at which impinging inhibitory (hyperpolarizing) "
-                    + "inputs reach equilibrium.",
-            defaultValue = "-75", order = 11, tab = "Input Currents")
+        label = "Inbitatory Reversal (mV)",
+        description = "The membrane potential at which impinging inhibitory (hyperpolarizing) "
+            + "inputs reach equilibrium.",
+        defaultValue = "-75", order = 11, tab = "Input Currents")
     private double inReversal = -75;
 
     /**
@@ -148,56 +149,56 @@ public class AdExIFRule extends SpikingNeuronUpdateRule implements NoisyUpdateRu
      * Adaptation reset parameter (nA).
      */
     @UserParameter(
-            label = "Reset (nA)",
-            description = "Adaptation reset parameter (nA)",
-            defaultValue = "0.0805", order = 12, tab = "Adaptation")
+        label = "Reset (nA)",
+        description = "Adaptation reset parameter (nA)",
+        defaultValue = "0.0805", order = 12, tab = "Adaptation")
     private double b = 0.0805;
 
     /**
      * Adaptation time constant (ms).
      */
     @UserParameter(
-            label = "Time constant (ms)",
-            description = "Controls the rate at which the neuron attains its resting potential.",
-            defaultValue = "40", order = 13, tab = "Adaptation")
+        label = "Time constant (ms)",
+        description = "Controls the rate at which the neuron attains its resting potential.",
+        defaultValue = "40", order = 13, tab = "Adaptation")
     private double tauW = 40;
 
     /**
      * mV
      */
     @UserParameter(
-            label = "Slope Factor",
-            description = "A value which regulates the overall effect of the exponential term on "
-                    + "the membrane potential equation.",
-            defaultValue = "2", order = 6, tab = "Membrane Voltage")
+        label = "Slope Factor",
+        description = "A value which regulates the overall effect of the exponential term on "
+            + "the membrane potential equation.",
+        defaultValue = "2", order = 6, tab = "Membrane Voltage")
     private double slopeFactor = 2;
 
     /**
      * Adaptation coupling parameter (nS).
      */
     @UserParameter(
-            label = "Coupling Const.",
-            description = "This represents the voltage to which the membrane potential will be reset after "
-                    + "an action potential has fired.",
-            defaultValue = "4", order = 14, tab = "Adaptation")
+        label = "Coupling Const.",
+        description = "This represents the voltage to which the membrane potential will be reset after "
+            + "an action potential has fired.",
+        defaultValue = "4", order = 14, tab = "Adaptation")
     private double a = 4;
 
     /**
      * Membrane Capacitance (pico Farads).
      */
     @UserParameter(
-            label = "Capacitance (μF)",
-            description = "A paramter designating the overall ability of the neuron's membrane to retain a charge.",
-            defaultValue = "281", order = 4, tab = "Membrane Voltage")
+        label = "Capacitance (μF)",
+        description = "A paramter designating the overall ability of the neuron's membrane to retain a charge.",
+        defaultValue = "281", order = 4, tab = "Membrane Voltage")
     private double memCapacitance = 281;
 
     /**
      * Background current being directly injected into the neuron (nA).
      */
     @UserParameter(
-            label = "Background Current (nA)",
-            description = "A tunable parameter in some ways similar to a bias parameter for non-spiking neurons.",
-            defaultValue = "0", order = 5, tab = "Membrane Voltage")
+        label = "Background Current (nA)",
+        description = "A tunable parameter in some ways similar to a bias parameter for non-spiking neurons.",
+        defaultValue = "0", order = 5, tab = "Membrane Voltage")
     private double i_bg = 0;
 
     /**
@@ -215,6 +216,8 @@ public class AdExIFRule extends SpikingNeuronUpdateRule implements NoisyUpdateRu
      * optionally be used to promote network stability.
      */
     private double refractoryPeriod = 1.0;
+
+    private double[] ei = new double[2];
 
     @Override
     public void update(Neuron neuron) {
@@ -235,8 +238,18 @@ public class AdExIFRule extends SpikingNeuronUpdateRule implements NoisyUpdateRu
         // potential between updates.
         v_mem = neuron.getActivation();
 
+
         // Retrieve incoming ex/in currents or proportion of open channels
-        double[] ei = inputType.getSeparatedInput(neuron);
+        ei[0] = 0;
+        ei[1] = 0;
+        for(int ii=0; ii<neuron.getFanIn().size(); ++ii) {
+            double val = neuron.getFanIn().get(ii).calcPSR();
+            if(neuron.getPolarity() == SimbrainConstants.Polarity.INHIBITORY) {
+                ei[1] += val;
+            } else {
+                ei[0] += val;
+            }
+        }
 
         // Calculate incoming excitatory and inhibitory voltage changes
         double iSyn_ex = g_e_bar * ei[0] * (exReversal - v_mem);
@@ -295,7 +308,6 @@ public class AdExIFRule extends SpikingNeuronUpdateRule implements NoisyUpdateRu
         cpy.addNoise = this.addNoise;
         cpy.b = this.b;
         cpy.g_L = this.g_L;
-        cpy.inputType = this.inputType;
         cpy.leakReversal = this.leakReversal;
         cpy.memCapacitance = this.memCapacitance;
         cpy.noiseGenerator = noiseGenerator.deepCopy();

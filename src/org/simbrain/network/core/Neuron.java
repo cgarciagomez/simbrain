@@ -247,10 +247,6 @@ public class Neuron implements EditableObject {
         this.parent = parent;
         setClamped(n.isClamped());
         setUpdateRule(n.getUpdateRule().deepCopy());
-        // Hack, this should be done in NeuronUpdateRule... but because of
-        // current api changes would have to be made to add neuron update rule's
-        // sub classes.
-        getUpdateRule().setInputType(n.getUpdateRule().getInputType());
         setIncrement(n.getIncrement());
         forceSetActivation(n.getActivation());
         setInputValue(n.getInputValue());
@@ -334,8 +330,11 @@ public class Neuron implements EditableObject {
     public void setUpdateRule(final NeuronUpdateRule updateRule) {
         NeuronUpdateRule oldRule = this.updateRule;
         this.updateRule = updateRule;
-        for (Synapse s : getFanOut().values()) {
-            s.initSpikeResponder();
+
+        if (oldRule == null) {
+            for (Synapse s : getFanOut().values()) {
+                s.initSpikeResponder();
+            }
         }
         if (getNetwork() != null) {
             getNetwork().updateTimeType();
@@ -515,15 +514,16 @@ public class Neuron implements EditableObject {
     }
 
     /**
-     * Sums the weighted <b>synaptic</b> inputs to a given neuron based on that
-     * synapse's spike responder. This is usually only appropriate for
-     * biological model neurons.
-     *
-     * @return the sum of the post-synaptic responses (synapse values in
+     * Returns the weighted input to this neuron, i.e. for each incoming neuron
+     * n, n's activation times the intervening weights. If n is a spiking
+     * neuron its {@link org.simbrain.network.synapse_update_rules.spikeresponders.SpikeResponder}
+     * is used, so that this returns the sum of the post-synaptic responses (synapse values in
      * response to spikes and mediated by spike responders) impinging on this
      * neuron.
+     *
+     * @return total input to this neuron from other neurons
      */
-    public double getSynapticInput() {
+    public double getInput() {
         double wtdSum = inputValue;
         for (int i = 0, n = fanIn.size(); i < n; i++) {
             wtdSum += fanIn.get(i).calcPSR();

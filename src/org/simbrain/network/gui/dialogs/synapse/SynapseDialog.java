@@ -18,7 +18,6 @@
  */
 package org.simbrain.network.gui.dialogs.synapse;
 
-import org.simbrain.network.core.NeuronUpdateRule.InputType;
 import org.simbrain.network.core.Synapse;
 import org.simbrain.network.gui.nodes.SynapseNode;
 import org.simbrain.util.SimbrainConstants;
@@ -172,46 +171,6 @@ public final class SynapseDialog extends StandardDialog {
         return synapseList;
     }
 
-
-    //TODO: Rename and rethink. We have two things. Source neuron is spiking
-    //  and target neuron uses spiking nodes. At the very least new javadocs
-
-    /**
-     * Tests to make sure that at least one source neuron in the provided list
-     * of synapses is a spiking neuron. This is used to determine if a spike
-     * responder panel should or shouldn't be displayed.
-     *
-     * @param synapses the synapses whose source neurons will be tested.
-     * @return whether or not at least one of the synapses has a spike responder
-     */
-    public static boolean targsUseSynapticInputs(Collection<Synapse> synapses) {
-        if (synapses.isEmpty()) {
-            return true;
-        }
-        if (synapses.size() == 1) {
-            Iterator<Synapse> synIter = synapses.iterator();
-            if (synIter.next().getTarget() == null) {
-                // Assumed template synapses (only possible synapses w/ out
-                // source or target, are assumed to contain a spike responder
-                return true;
-            }
-        }
-
-        boolean noSpikeResponders = synapses.stream().anyMatch(s -> s.getSpikeResponder() == null);
-        if (noSpikeResponders) {
-            return false;
-        }
-
-        // Check for synaptic inputs in target
-        for (Synapse s : synapses) {
-            if (s.getTarget() != null) {
-                if (s.getTarget().getUpdateRule().getInputType() == InputType.SYNAPTIC) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     /**
      * Helper which returns logical synapses from a list of gui Synapse Nodes.

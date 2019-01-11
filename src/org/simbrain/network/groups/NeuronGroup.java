@@ -483,8 +483,14 @@ public class NeuronGroup extends Group implements CopyableGroup<NeuronGroup>  {
         }
     }
 
-    public Neuron getNeuron(int neuNo) {
-        return neuronList.get(neuNo);
+    /**
+     * Return the neuron at the specified index of the internal list storing neurons.
+     *
+     * @param neuronIndex index of the neuron
+     * @return the neuron at that index
+     */
+    public Neuron getNeuron(int neuronIndex) {
+        return neuronList.get(neuronIndex);
     }
 
     /**

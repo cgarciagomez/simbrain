@@ -269,7 +269,6 @@ public class PatternsOfActivity extends RegisteredSimulation {
         readGroup.setLocation(recNeurons.getMaxX() + 350, recNeurons.getMinY() + 300);
         for (Neuron n : readGroup.getNeuronList()) {
             n.setUpdateRule(new SigmoidalRule());
-            n.getUpdateRule().setInputType(NeuronUpdateRule.InputType.SYNAPTIC);
             ((SigmoidalRule) n.getUpdateRule()).setLowerBound(-4);
             ((SigmoidalRule) n.getUpdateRule()).setUpperBound(4);
             ((SigmoidalRule) n.getUpdateRule()).setSlope(4);

@@ -21,6 +21,7 @@ package org.simbrain.network.core;
 import org.simbrain.network.groups.SynapseGroup;
 import org.simbrain.network.synapse_update_rules.StaticSynapseRule;
 import org.simbrain.network.synapse_update_rules.spikeresponders.JumpAndDecay;
+import org.simbrain.network.synapse_update_rules.spikeresponders.NonResponder;
 import org.simbrain.network.synapse_update_rules.spikeresponders.SpikeResponder;
 import org.simbrain.util.UserParameter;
 import org.simbrain.util.Utils;
@@ -77,7 +78,7 @@ public class Synapse implements EditableObject {
      */
     private Neuron target;
 
-    //TODO: Rename learningRule to synapseupdaterule
+    //TODO: Rename learningRule to synapseupdaterule?
     /**
      * The update method of this synapse, which corresponds to what kind of
      * synapse it is.
